@@ -5,11 +5,11 @@ import java.util.concurrent.StructuredTaskScope.*;
 
 public class Exercises {
 
-    // ---- Helper types for Exercise 1: Competitive Pricing Engine ----
+    // ---- Typy pomocnicze do Ćwiczenia 1: Silnik porównywania cen ----
 
     record PriceQuote(String source, double price, String currency) {}
 
-    // ---- Helper types for Exercise 2: Request-Scoped Context ----
+    // ---- Typy pomocnicze do Ćwiczenia 2: Kontekst zakresu żądania ----
 
     record RequestContext(String requestId, String userId, String locale) {}
 
@@ -19,7 +19,7 @@ public class Exercises {
 
     record ProductPage(ProductInfo product, ReviewSummary reviews) {}
 
-    // ---- Helper types for Exercise 3: Windowed Data Pipeline ----
+    // ---- Typy pomocnicze do Ćwiczenia 3: Potok danych z okienkowaniem ----
 
     sealed interface DataChunk permits DataChunk.TextChunk, DataChunk.NumericChunk,
             DataChunk.ErrorChunk {
@@ -29,28 +29,28 @@ public class Exercises {
     }
 
     // ============================================================
-    // Exercise 1: Competitive Pricing Engine
+    // Ćwiczenie 1: Silnik porównywania cen
     // ============================================================
 
     /**
-     * Query multiple price sources concurrently and return the lowest quote.
+     * Odpytaj wiele źródeł cen współbieżnie i zwróć najniższą ofertę.
      *
-     * <p>Given a product ID and a list of price-source names, fork a virtual
-     * thread for each source using {@link java.util.concurrent.StructuredTaskScope}
-     * with {@code Joiner.allSuccessfulOrThrow()}. Each source should call
-     * {@link #fetchQuote(String, String)} to simulate fetching a price.
-     * After all tasks complete, find the minimum-priced {@link PriceQuote}.</p>
+     * <p>Mając identyfikator produktu i listę nazw źródeł cen, utwórz virtual thread
+     * dla każdego źródła za pomocą {@link java.util.concurrent.StructuredTaskScope}
+     * z {@code Joiner.allSuccessfulOrThrow()}. Każde źródło powinno wywołać
+     * {@link #fetchQuote(String, String)} aby zasymulować pobieranie ceny.
+     * Po zakończeniu wszystkich zadań, znajdź {@link PriceQuote} z najniższą ceną.</p>
      *
-     * <p><b>Hints:</b> Use {@code StructuredTaskScope.open(Joiner.allSuccessfulOrThrow())},
-     * {@code scope.fork()}, {@code scope.join()}, and {@code Stream.min()}
-     * on the results.</p>
+     * <p><b>Wskazówki:</b> Użyj {@code StructuredTaskScope.open(Joiner.allSuccessfulOrThrow())},
+     * {@code scope.fork()}, {@code scope.join()} oraz {@code Stream.min()}
+     * na wynikach.</p>
      */
     static PriceQuote findLowestPrice(String productId, List<String> sources) throws Exception {
         throw new UnsupportedOperationException();
     }
 
     /**
-     * Simulates fetching a price quote from a source. Do NOT modify this method.
+     * Symuluje pobieranie oferty cenowej ze źródła. NIE modyfikuj tej metody.
      */
     static PriceQuote fetchQuote(String productId, String source) {
         var random = new Random(source.hashCode() + productId.hashCode());
@@ -59,28 +59,28 @@ public class Exercises {
     }
 
     // ============================================================
-    // Exercise 2: Request-Scoped Context Propagation
+    // Ćwiczenie 2: Propagacja kontekstu zakresu żądania
     // ============================================================
 
     static final ScopedValue<RequestContext> REQUEST_CTX = ScopedValue.newInstance();
 
     /**
-     * Propagate a {@link RequestContext} through a layered architecture using {@link ScopedValue}.
+     * Propaguj {@link RequestContext} przez warstwową architekturę za pomocą {@link ScopedValue}.
      *
-     * <p>Implement a method that:</p>
+     * <p>Zaimplementuj metodę, która:</p>
      * <ol>
-     *   <li>Binds the given {@code RequestContext} to the {@code REQUEST_CTX} scoped value.</li>
-     *   <li>Inside the scope, uses {@code StructuredTaskScope} to concurrently:
+     *   <li>Wiąże podany {@code RequestContext} ze scoped value {@code REQUEST_CTX}.</li>
+     *   <li>Wewnątrz zakresu używa {@code StructuredTaskScope} do współbieżnego:
      *       <ul>
-     *         <li>Fetch product info via {@link #fetchProduct(String)}</li>
-     *         <li>Fetch review summary via {@link #fetchReviews(String)}</li>
+     *         <li>Pobrania informacji o produkcie przez {@link #fetchProduct(String)}</li>
+     *         <li>Pobrania podsumowania recenzji przez {@link #fetchReviews(String)}</li>
      *       </ul>
      *   </li>
-     *   <li>Combines the results into a {@link ProductPage}.</li>
+     *   <li>Łączy wyniki w {@link ProductPage}.</li>
      * </ol>
      *
-     * <p><b>Hints:</b> Use {@code ScopedValue.where(REQUEST_CTX, ctx).call(() -> ...)},
-     * {@code StructuredTaskScope.open(Joiner.allSuccessfulOrThrow())}, and
+     * <p><b>Wskazówki:</b> Użyj {@code ScopedValue.where(REQUEST_CTX, ctx).call(() -> ...)},
+     * {@code StructuredTaskScope.open(Joiner.allSuccessfulOrThrow())} oraz
      * {@code scope.fork()}.</p>
      */
     static ProductPage loadProductPage(RequestContext ctx, String productId) throws Exception {
@@ -88,7 +88,7 @@ public class Exercises {
     }
 
     /**
-     * Simulates fetching product info. Reads the scoped RequestContext. Do NOT modify.
+     * Symuluje pobieranie informacji o produkcie. Odczytuje RequestContext z zakresu. NIE modyfikuj.
      */
     static ProductInfo fetchProduct(String productId) {
         var ctx = REQUEST_CTX.get();
@@ -96,7 +96,7 @@ public class Exercises {
     }
 
     /**
-     * Simulates fetching reviews. Reads the scoped RequestContext. Do NOT modify.
+     * Symuluje pobieranie recenzji. Odczytuje RequestContext z zakresu. NIE modyfikuj.
      */
     static ReviewSummary fetchReviews(String productId) {
         var ctx = REQUEST_CTX.get();
@@ -104,29 +104,29 @@ public class Exercises {
     }
 
     // ============================================================
-    // Exercise 3: Windowed Data Pipeline
+    // Ćwiczenie 3: Potok danych z okienkowaniem
     // ============================================================
 
     /**
-     * Process a stream of mixed data chunks with windowed aggregation.
+     * Przetwórz strumień mieszanych fragmentów danych z agregacją okienkową.
      *
-     * <p>Given a list of {@link DataChunk}s and a window size:</p>
+     * <p>Mając listę {@link DataChunk} i rozmiar okna:</p>
      * <ol>
-     *   <li>Use {@code Stream.Gatherers.windowFixed(windowSize)} to split the
-     *       chunks into fixed-size windows.</li>
-     *   <li>For each window, produce a summary string:
+     *   <li>Użyj {@code Stream.Gatherers.windowFixed(windowSize)} aby podzielić
+     *       fragmenty na okna o stałym rozmiarze.</li>
+     *   <li>Dla każdego okna wygeneruj łańcuch podsumowania:
      *       <ul>
-     *         <li>Count the {@code TextChunk}s, sum the {@code NumericChunk} values,
-     *             and list the {@code ErrorChunk} error codes.</li>
-     *         <li>Use primitive patterns in switch to classify numeric values
-     *             (e.g., {@code case double d when d > 100 -> "high"}).</li>
+     *         <li>Policz {@code TextChunk}, zsumuj wartości {@code NumericChunk}
+     *             i wypisz kody błędów {@code ErrorChunk}.</li>
+     *         <li>Użyj wzorców prymitywnych w switch do klasyfikacji wartości liczbowych
+     *             (np. {@code case double d when d > 100 -> "high"}).</li>
      *       </ul>
      *   </li>
-     *   <li>Return a {@code List<String>} of window summaries.</li>
+     *   <li>Zwróć {@code List<String>} z podsumowaniami okien.</li>
      * </ol>
      *
-     * <p><b>Hints:</b> Use {@code stream.gather(Gatherers.windowFixed(n))},
-     * sealed type pattern matching on {@code DataChunk}, and primitive patterns.</p>
+     * <p><b>Wskazówki:</b> Użyj {@code stream.gather(Gatherers.windowFixed(n))},
+     * dopasowania wzorców typów zamkniętych na {@code DataChunk} i wzorców prymitywnych.</p>
      */
     static List<String> processWindowed(List<DataChunk> chunks, int windowSize) {
         throw new UnsupportedOperationException();

@@ -7,200 +7,208 @@ import java.util.*;
 import java.util.stream.*;
 
 // ============================================================
-// Section 1: Text Blocks -- Introduction
+// Sekcja 1: Bloki tekstowe — Wprowadzenie
 // ============================================================
 
 /*
-## Text Blocks -- Introduction
+## Bloki tekstowe — Wprowadzenie
 
-- Before text blocks, embedding multi-line strings in Java was
-  painful: manual \n escapes, string concatenation with +, and
-  poor readability. A simple JSON snippet could take 5+ lines of
-  concatenation with escaped quotes everywhere.
-- Other languages solved this long ago:
-    - Python: triple-quoted strings (""" or ''')
-    - Kotlin: trimMargin() / trimIndent() on raw strings
-    - JavaScript: template literals with backticks
-    - C#: verbatim strings with @"..."
-- **JEP timeline**:
-    - JEP 355: Preview in Java 13
-    - JEP 368: Second preview in Java 14
-    - JEP 378: Finalized in Java 15
-    (Taught here with Java 17 LTS)
-- **Basic syntax**: opening """ followed by a line terminator,
-  then the content, closed by """. The opening """ MUST be
-  followed by a line terminator -- you cannot put content on the
-  same line as the opening delimiter.
-- Text blocks produce ordinary `String` instances -- they are
-  NOT a new type. You can call any String method on them, use
-  them in concatenation, pass them anywhere a String is expected.
-- **Three-step compile-time processing**:
-    1. Line terminators are normalized to \n (LF)
-    2. Incidental whitespace is removed (re-indentation)
-    3. Escape sequences are interpreted
-  This happens at compile time, so there is no runtime overhead.
+- Przed blokami tekstowymi osadzanie wieloliniowych ciągów znaków
+  w Javie było uciążliwe: ręczne znaki ucieczki \n, konkatenacja
+  ciągów z + i słaba czytelność. Prosty fragment JSON mógł zająć
+  5+ linii konkatenacji z wszędzie uciekającymi cudzysłowami.
+- Inne języki rozwiązały to dawno temu:
+    - Python: ciągi z potrójnym cudzysłowem (""" lub ''')
+    - Kotlin: trimMargin() / trimIndent() na surowych ciągach
+    - JavaScript: literały szablonowe z backtickami
+    - C#: ciągi dosłowne z @"..."
+- **Harmonogram JEP**:
+    - JEP 355: Podgląd w Javie 13
+    - JEP 368: Drugi podgląd w Javie 14
+    - JEP 378: Sfinalizowano w Javie 15
+    (Omawiane tutaj z Java 17 LTS)
+- **Podstawowa składnia**: otwierające """ po którym następuje
+  terminator linii, potem zawartość, zamknięte przez """.
+  Otwierające """ MUSZĄ być zakończone terminatorem linii
+  — nie można umieścić zawartości w tej samej linii co
+  otwierający delimiter.
+- Bloki tekstowe produkują zwykłe instancje `String` — NIE
+  są nowym typem. Możesz wywoływać na nich dowolne metody String,
+  używać ich w konkatenacji, przekazywać wszędzie gdzie oczekiwany
+  jest String.
+- **Trzyetapowe przetwarzanie w czasie kompilacji**:
+    1. Terminatory linii są normalizowane do \n (LF)
+    2. Zbędne białe znaki są usuwane (ponowne wcięcie)
+    3. Sekwencje ucieczki są interpretowane
+  Dzieje się to w czasie kompilacji, więc nie ma narzutu w czasie
+  wykonania.
 */
 
 // ============================================================
-// Section 2: Text Blocks -- Indentation and Whitespace
+// Sekcja 2: Bloki tekstowe — Wcięcia i białe znaki
 // ============================================================
 
 /*
-## Text Blocks -- Indentation and Whitespace
+## Bloki tekstowe — Wcięcia i białe znaki
 
-- The key concept is **incidental vs essential whitespace**:
-    - Incidental whitespace = indentation added purely for code
-      formatting (to align with surrounding Java code). This is
-      automatically removed by the compiler.
-    - Essential whitespace = indentation that is part of the
-      actual content (e.g., indentation in HTML or JSON). This
-      is preserved in the resulting string.
-- **Re-indentation algorithm**: The compiler finds the leftmost
-  non-whitespace character across ALL content lines AND the
-  closing """ position. That column becomes the left margin, and
-  all whitespace to the left of it is stripped.
-- **Closing """ position controls indentation**:
-    - Closing """ aligned with content -- no extra indentation
-    - Closing """ moved left -- adds indentation to all lines
-    - Closing """ moved right -- no effect (content lines
-      determine the margin)
-- **String.stripIndent()** (Java 15) -- applies the same
-  re-indentation algorithm to a regular string at runtime.
-  Useful when text blocks are not available (e.g., reading from
-  a file or database).
-- Trailing whitespace on each line is stripped by default. Use
-  the \s escape (Java 15) to preserve trailing spaces when needed.
-- Empty lines within a text block are preserved.
+- Kluczowym pojęciem jest **zbędne vs istotne białe znaki**:
+    - Zbędne białe znaki = wcięcie dodane wyłącznie na potrzeby
+      formatowania kodu (do wyrównania z otaczającym kodem Java).
+      Są automatycznie usuwane przez kompilator.
+    - Istotne białe znaki = wcięcie będące częścią
+      faktycznej zawartości (np. wcięcie w HTML lub JSON). Są
+      zachowywane w wynikowym ciągu.
+- **Algorytm ponownego wcięcia**: Kompilator znajduje najbardziej
+  na lewo położony znak niebędący białym znakiem we WSZYSTKICH
+  liniach zawartości ORAZ pozycję zamykającego """. Ta kolumna
+  staje się lewym marginesem, a wszystkie białe znaki na lewo
+  od niej są usuwane.
+- **Pozycja zamykającego """ kontroluje wcięcie**:
+    - Zamykające """ wyrównane z zawartością — brak dodatkowego wcięcia
+    - Zamykające """ przesunięte w lewo — dodaje wcięcie do wszystkich linii
+    - Zamykające """ przesunięte w prawo — bez efektu (linie zawartości
+      określają margines)
+- **String.stripIndent()** (Java 15) — stosuje ten sam
+  algorytm ponownego wcięcia do zwykłego ciągu w czasie wykonania.
+  Przydatne gdy bloki tekstowe nie są dostępne (np. odczyt z
+  pliku lub bazy danych).
+- Końcowe białe znaki w każdej linii są domyślnie usuwane. Użyj
+  sekwencji ucieczki \s (Java 15) aby zachować końcowe spacje gdy potrzeba.
+- Puste linie wewnątrz bloku tekstowego są zachowywane.
 */
 
 // ============================================================
-// Section 3: Text Blocks -- Escape Sequences and Formatting
+// Sekcja 3: Bloki tekstowe — Sekwencje ucieczki i formatowanie
 // ============================================================
 
 /*
-## Text Blocks -- Escape Sequences and Formatting
+## Bloki tekstowe — Sekwencje ucieczki i formatowanie
 
-- **\s escape** (Java 15) -- translates to a single space (U+0020).
-  Its purpose is to prevent trailing whitespace stripping. Any
-  spaces before \s are also preserved.
-- **\ (backslash-newline)** -- line continuation (Java 15). Joins
-  the current line with the next, suppressing the line terminator.
-  Useful for long lines that you want to wrap in source code but
-  appear as a single line in the resulting string.
-- **Traditional escape sequences** work inside text blocks:
-  \n, \t, \\, \", unicode escapes, etc. They are processed in step 3
-  of the compile-time pipeline (after re-indentation).
-- **Quoting rules**: A single " or two "" are fine inside a text
-  block. Three consecutive quotes must be escaped: use \"\"\" or
-  ""\". The rule is: any sequence of 3+ unescaped quotes would
-  close the text block.
-- **String.formatted()** (Java 15) -- instance method equivalent
-  to String.format(). Reads more naturally with text blocks:
+- **Sekwencja ucieczki \s** (Java 15) — tłumaczy się na pojedynczą spację
+  (U+0020). Jej celem jest zapobieganie usuwaniu końcowych białych znaków.
+  Spacje przed \s są również zachowywane.
+- **\ (backslash-nowa-linia)** — kontynuacja linii (Java 15). Łączy
+  bieżącą linię z następną, pomijając terminator linii.
+  Przydatne dla długich linii, które chcesz zawinąć w kodzie źródłowym,
+  ale mają pojawiać się jako pojedyncza linia w wynikowym ciągu.
+- **Tradycyjne sekwencje ucieczki** działają wewnątrz bloków tekstowych:
+  \n, \t, \\, \", ucieczki unicode itp. Są przetwarzane w kroku 3
+  potoku kompilacji (po ponownym wcięciu).
+- **Zasady cytowania**: Pojedynczy " lub dwa "" są dopuszczalne
+  wewnątrz bloku tekstowego. Trzy kolejne cudzysłowy muszą być
+  ucieczkowane: użyj \"\"\" lub ""\". Zasada jest taka: każda
+  sekwencja 3+ nieucieczkowanych cudzysłowów zamknęłaby blok tekstowy.
+- **String.formatted()** (Java 15) — metoda instancji będąca
+  odpowiednikiem String.format(). Czyta się bardziej naturalnie
+  z blokami tekstowymi:
       var json = """
           {"name": "%s", "age": %d}
           """.formatted(name, age);
-  instead of String.format(textBlock, name, age).
-- **String.translateEscapes()** (Java 15) -- interprets Java
-  escape sequences in a string at runtime. Converts literal
-  backslash-n to a newline character, backslash-t to a tab, etc.
-  Useful when processing user input or config files that contain
-  escape sequences as literal text.
+  zamiast String.format(textBlock, name, age).
+- **String.translateEscapes()** (Java 15) — interpretuje
+  sekwencje ucieczki Javy w ciągu w czasie wykonania. Konwertuje
+  dosłowny backslash-n na znak nowej linii, backslash-t na tabulator itp.
+  Przydatne przy przetwarzaniu danych użytkownika lub plików
+  konfiguracyjnych zawierających sekwencje ucieczki jako dosłowny tekst.
 */
 
 // ============================================================
-// Section 4: Text Blocks -- Practical Patterns
+// Sekcja 4: Bloki tekstowe — Wzorce praktyczne
 // ============================================================
 
 /*
-## Text Blocks -- Practical Patterns
+## Bloki tekstowe — Wzorce praktyczne
 
-- **Embedding structured text**: Text blocks excel at embedding
-  JSON, HTML, SQL, YAML, XML, and other structured formats
-  directly in Java code with proper formatting preserved.
-- **Parameterized templates**: Combine text blocks with
-  .formatted() (or String.format()) to create reusable templates
-  with placeholders (%s, %d, %.2f, etc.).
-- **Regex readability**: Complex regular expressions can be split
-  across multiple lines using the \ line continuation escape,
-  making them much more readable than single-line regex strings.
-- **Code generation**: Text blocks are ideal for generating source
-  code, configuration files, or other structured text where
-  indentation matters.
-- **Testing**: Text blocks make expected values in assertions much
-  more readable -- you can write the expected output exactly as it
-  should appear, with proper formatting and line breaks.
+- **Osadzanie tekstu strukturalnego**: Bloki tekstowe doskonale
+  nadają się do osadzania JSON, HTML, SQL, YAML, XML i innych
+  formatów strukturalnych bezpośrednio w kodzie Java z zachowanym
+  prawidłowym formatowaniem.
+- **Szablony z parametrami**: Połącz bloki tekstowe z
+  .formatted() (lub String.format()) aby tworzyć wielokrotnie
+  używane szablony z symbolami zastępczymi (%s, %d, %.2f itp.).
+- **Czytelność wyrażeń regularnych**: Złożone wyrażenia regularne
+  mogą być podzielone na wiele linii przy użyciu sekwencji ucieczki
+  \ kontynuacji linii, co czyni je znacznie bardziej czytelnymi
+  niż jednoliniowe ciągi regex.
+- **Generowanie kodu**: Bloki tekstowe idealnie nadają się do
+  generowania kodu źródłowego, plików konfiguracyjnych lub innego
+  tekstu strukturalnego, gdzie wcięcia mają znaczenie.
+- **Testowanie**: Bloki tekstowe czynią oczekiwane wartości w asercjach
+  znacznie bardziej czytelnymi — możesz zapisać oczekiwany wynik
+  dokładnie tak, jak powinien wyglądać, z prawidłowym formatowaniem
+  i podziałami linii.
 */
 
 // ============================================================
-// Section 5: The @Serial Annotation
+// Sekcja 5: Adnotacja @Serial
 // ============================================================
 
 /*
-## The @Serial Annotation
+## Adnotacja @Serial
 
-- Introduced in Java 14 (JEP 367), @Serial is a compile-time
-  annotation for serialization-related members.
-- **Purpose**: Provides compile-time checking that serialization
-  members have the correct signatures. Without @Serial, a typo
-  in a method name (e.g., writeObjct instead of writeObject) or
-  wrong parameter types would silently fail -- the JVM would
-  just ignore the misspelled method during serialization.
-- **Applies to these members**:
-    - serialVersionUID (must be private static final long)
-    - writeObject(ObjectOutputStream) (must be private void)
-    - readObject(ObjectInputStream) (must be private void)
-    - readObjectNoData() (must be private void)
-    - readResolve() (must return Object)
-    - writeReplace() (must return Object)
-    - serialPersistentFields (must be private static final
+- Wprowadzona w Javie 14 (JEP 367), @Serial jest adnotacją
+  czasu kompilacji dla członków związanych z serializacją.
+- **Cel**: Zapewnia sprawdzanie w czasie kompilacji, czy członki
+  serializacji mają prawidłowe sygnatury. Bez @Serial literówka
+  w nazwie metody (np. writeObjct zamiast writeObject) lub
+  nieprawidłowe typy parametrów cicho by zawiodły — JVM po prostu
+  zignorowałby błędnie nazwaną metodę podczas serializacji.
+- **Stosuje się do następujących członków**:
+    - serialVersionUID (musi być private static final long)
+    - writeObject(ObjectOutputStream) (musi być private void)
+    - readObject(ObjectInputStream) (musi być private void)
+    - readObjectNoData() (musi być private void)
+    - readResolve() (musi zwracać Object)
+    - writeReplace() (musi zwracać Object)
+    - serialPersistentFields (musi być private static final
       ObjectStreamField[])
-- **Comparison with @Override**: Just as @Override catches method
-  signature mismatches with superclass methods, @Serial catches
-  signature mismatches with the serialization protocol. Both are
-  optional but strongly recommended for safety.
-- The annotation is in the java.io package and is retained only
-  at compile time (SOURCE retention) -- it has no runtime cost.
+- **Porównanie z @Override**: Tak jak @Override wyłapuje
+  niezgodności sygnatur metod z metodami nadklasy, @Serial wyłapuje
+  niezgodności sygnatur z protokołem serializacji. Obie są
+  opcjonalne, ale zdecydowanie zalecane dla bezpieczeństwa.
+- Adnotacja jest w pakiecie java.io i jest zachowywana tylko
+  w czasie kompilacji (retencja SOURCE) — nie ma kosztu w czasie wykonania.
 */
 
 // ============================================================
-// Section 6: Other Notable Java 12-17 Additions
+// Sekcja 6: Inne istotne dodatki Javy 12-17
 // ============================================================
 
 /*
-## Other Notable Java 12-17 Additions
+## Inne istotne dodatki Javy 12-17
 
-- **Helpful NullPointerExceptions** (JEP 358, Java 14) -- when a
-  NullPointerException occurs, the JVM now includes a detailed
-  message describing exactly which variable or expression was
-  null. For example: "Cannot invoke String.length() because
-  this.name is null". This dramatically reduces debugging time
-  for chained method calls like a.getB().getC().doStuff().
-- **Stream.toList()** (Java 16) -- a convenient terminal
-  operation that returns an **unmodifiable** List. Important
-  difference from Collectors.toList(): the latter returns a
-  **mutable** ArrayList, while .toList() returns an unmodifiable
-  list (similar to List.of()). Use .toList() when you do not
-  need to modify the result; use Collectors.toList() or
-  Collectors.toCollection(ArrayList::new) when you do.
-- **String.indent(int n)** (Java 12) -- adjusts indentation:
-    - Positive n: prepends n spaces to each line
-    - Negative n: removes up to n leading spaces from each line
-    - Also normalizes line terminators and ensures trailing \n
-- **String.transform(Function)** (Java 12) -- applies a function
-  to the string and returns the result. Enables fluent chaining:
+- **Pomocne NullPointerException** (JEP 358, Java 14) — gdy
+  NullPointerException wystąpi, JVM zawiera teraz szczegółowy
+  komunikat opisujący dokładnie, która zmienna lub wyrażenie było
+  null. Na przykład: "Cannot invoke String.length() because
+  this.name is null". To dramatycznie skraca czas debugowania
+  dla łańcuchowych wywołań metod jak a.getB().getC().doStuff().
+- **Stream.toList()** (Java 16) — wygodna operacja terminalna
+  zwracająca **niemodyfikowalną** listę. Ważna
+  różnica od Collectors.toList(): ta ostatnia zwraca
+  **mutowalny** ArrayList, natomiast .toList() zwraca niemodyfikowalną
+  listę (podobną do List.of()). Użyj .toList() gdy nie potrzebujesz
+  modyfikować wyniku; użyj Collectors.toList() lub
+  Collectors.toCollection(ArrayList::new) gdy potrzebujesz.
+- **String.indent(int n)** (Java 12) — dostosowuje wcięcie:
+    - Dodatnie n: dodaje n spacji na początku każdej linii
+    - Ujemne n: usuwa do n wiodących spacji z każdej linii
+    - Również normalizuje terminatory linii i zapewnia końcowe \n
+- **String.transform(Function)** (Java 12) — stosuje funkcję
+  do ciągu i zwraca wynik. Umożliwia płynne łańcuchowanie:
     "hello".transform(String::toUpperCase).transform(s -> s + "!")
-- **CompactNumberFormat** (Java 12) -- formats numbers in a
-  locale-aware compact form: 1000 becomes "1K", 1000000 becomes
-  "1M", etc. Supports SHORT and LONG styles.
-- **Files.mismatch()** (Java 12) -- compares two files and
-  returns the position of the first mismatched byte, or -1 if
-  the files are identical. Much more efficient than reading both
-  files into memory and comparing.
+- **CompactNumberFormat** (Java 12) — formatuje liczby w
+  skróconej formie zależnej od lokalizacji: 1000 staje się "1K",
+  1000000 staje się "1M" itp. Obsługuje style SHORT i LONG.
+- **Files.mismatch()** (Java 12) — porównuje dwa pliki i
+  zwraca pozycję pierwszego niezgodnego bajtu, lub -1 jeśli
+  pliki są identyczne. Znacznie wydajniejsze niż wczytywanie obu
+  plików do pamięci i porównywanie.
 */
 
 public class OtherChanges {
 
-    // ---- Serializable classes for @Serial demonstration ----
+    // ---- Klasy Serializable do demonstracji @Serial ----
 
     static class SerializableUser implements Serializable {
         @Serial
@@ -262,13 +270,13 @@ public class OtherChanges {
     }
 
     // ============================================================
-    // Section 1: Text Blocks -- Introduction
+    // Sekcja 1: Bloki tekstowe — Wprowadzenie
     // ============================================================
 
     static void textBlocksIntroduction() {
         System.out.println("=== Section 1: Text Blocks -- Introduction ===");
 
-        // ---- The old way: JSON with concatenation ----
+        // ---- Stary sposób: JSON z konkatenacją ----
         System.out.println("--- Old way: JSON with string concatenation ---");
         String oldJson = "{\n" +
                 "  \"name\": \"Alice\",\n" +
@@ -277,7 +285,7 @@ public class OtherChanges {
                 "}";
         System.out.println(oldJson);
 
-        // ---- The new way: text block ----
+        // ---- Nowy sposób: blok tekstowy ----
         System.out.println("\n--- New way: text block ---");
         String newJson = """
                 {
@@ -287,10 +295,10 @@ public class OtherChanges {
                 }""";
         System.out.println(newJson);
 
-        // Both produce the same String
+        // Oba produkują ten sam String
         System.out.println("old equals new: " + oldJson.equals(newJson));
 
-        // ---- HTML template ----
+        // ---- Szablon HTML ----
         System.out.println("\n--- HTML template ---");
         String html = """
                 <html>
@@ -304,7 +312,7 @@ public class OtherChanges {
                 """;
         System.out.println(html);
 
-        // ---- SQL query ----
+        // ---- Zapytanie SQL ----
         System.out.println("--- SQL query ---");
         String sql = """
                 SELECT u.name, u.email, o.total
@@ -315,7 +323,7 @@ public class OtherChanges {
                 """;
         System.out.println(sql);
 
-        // ---- Text blocks are just String instances ----
+        // ---- Bloki tekstowe to po prostu instancje String ----
         System.out.println("--- Text blocks are just String instances ---");
         String textBlock = """
                 Hello, World!
@@ -325,7 +333,7 @@ public class OtherChanges {
         System.out.println("contains \"World\": " + textBlock.contains("World"));
         System.out.println("toUpperCase: " + textBlock.strip().toUpperCase());
 
-        // Concatenation with text blocks
+        // Konkatenacja z blokami tekstowymi
         String prefix = "Greeting: ";
         String combined = prefix + """
                 Hello from a text block!""";
@@ -333,16 +341,16 @@ public class OtherChanges {
     }
 
     // ============================================================
-    // Section 2: Text Blocks -- Indentation and Whitespace
+    // Sekcja 2: Bloki tekstowe — Wcięcia i białe znaki
     // ============================================================
 
     static void textBlocksIndentation() {
         System.out.println("\n=== Section 2: Text Blocks -- Indentation and Whitespace ===");
 
-        // ---- Closing """ position controls indentation ----
+        // ---- Pozycja zamykającego """ kontroluje wcięcie ----
         System.out.println("--- Closing delimiter position ---");
 
-        // Variant 1: closing """ aligned with content -- no extra indentation
+        // Wariant 1: zamykające """ wyrównane z zawartością — brak dodatkowego wcięcia
         String variant1 = """
                 Line one
                 Line two
@@ -351,7 +359,7 @@ public class OtherChanges {
         System.out.println("Variant 1 (aligned):");
         System.out.println(variant1.replace(" ", "."));
 
-        // Variant 2: closing """ moved left -- adds indentation
+        // Wariant 2: zamykające """ przesunięte w lewo — dodaje wcięcie
         String variant2 = """
                 Line one
                 Line two
@@ -360,7 +368,7 @@ public class OtherChanges {
         System.out.println("Variant 2 (closing left):");
         System.out.println(variant2.replace(" ", "."));
 
-        // Variant 3: closing """ indented further -- content determines margin
+        // Wariant 3: zamykające """ wcięte dalej — zawartość określa margines
         String variant3 = """
                 Line one
                 Line two
@@ -369,7 +377,7 @@ public class OtherChanges {
         System.out.println("Variant 3 (closing right):");
         System.out.println(variant3.replace(" ", "."));
 
-        // ---- Essential vs incidental whitespace ----
+        // ---- Istotne vs zbędne białe znaki ----
         System.out.println("--- Essential vs incidental whitespace ---");
         String withEssential = """
                 No indent
@@ -381,7 +389,7 @@ public class OtherChanges {
         System.out.println("Essential whitespace preserved:");
         System.out.println(withEssential.replace(" ", "."));
 
-        // ---- stripIndent() on a regular string ----
+        // ---- stripIndent() na zwykłym ciągu ----
         System.out.println("--- stripIndent() on a regular string ---");
         String regularString = "    Line one\n    Line two\n    Line three\n";
         System.out.println("Before stripIndent():");
@@ -389,9 +397,9 @@ public class OtherChanges {
         System.out.println("After stripIndent():");
         System.out.println(regularString.stripIndent().replace(" ", "."));
 
-        // ---- Trailing whitespace stripped by default ----
+        // ---- Końcowe białe znaki domyślnie usuwane ----
         System.out.println("--- Trailing whitespace stripped by default ---");
-        // Trailing spaces after "Hello" are removed
+        // Końcowe spacje po "Hello" są usuwane
         String trailingDemo = """
                 Hello
                 World
@@ -400,7 +408,7 @@ public class OtherChanges {
         trailingDemo.lines().forEach(line ->
                 System.out.println("  [" + line + "] length=" + line.length()));
 
-        // ---- Empty lines preserved ----
+        // ---- Puste linie zachowywane ----
         System.out.println("\n--- Empty lines preserved ---");
         String withEmpty = """
                 First
@@ -415,13 +423,13 @@ public class OtherChanges {
     }
 
     // ============================================================
-    // Section 3: Text Blocks -- Escape Sequences and Formatting
+    // Sekcja 3: Bloki tekstowe — Sekwencje ucieczki i formatowanie
     // ============================================================
 
     static void textBlocksEscapes() {
         System.out.println("\n=== Section 3: Text Blocks -- Escape Sequences and Formatting ===");
 
-        // ---- \s escape: preserve trailing spaces ----
+        // ---- Sekwencja ucieczki \s: zachowanie końcowych spacji ----
         System.out.println("--- \\s escape (preserve trailing spaces) ---");
         String withoutBackslashS = """
                 Name:     Alice
@@ -438,7 +446,7 @@ public class OtherChanges {
         withBackslashS.lines().forEach(line ->
                 System.out.println("  [" + line + "] len=" + line.length()));
 
-        // ---- Backslash-newline: line continuation ----
+        // ---- Backslash-nowa-linia: kontynuacja linii ----
         System.out.println("\n--- Backslash-newline (line continuation) ---");
         String singleLine = """
                 This is a very long line that we want to \
@@ -448,7 +456,7 @@ public class OtherChanges {
         System.out.println("  " + singleLine);
         System.out.println("  Line count: " + singleLine.lines().count());
 
-        // ---- Quoting rules ----
+        // ---- Zasady cytowania ----
         System.out.println("\n--- Quoting rules ---");
         String quoting = """
                 Single quote: "hello"
@@ -458,7 +466,7 @@ public class OtherChanges {
         System.out.println("Quoting examples:");
         System.out.println(quoting);
 
-        // ---- .formatted() with text blocks ----
+        // ---- .formatted() z blokami tekstowymi ----
         System.out.println("--- .formatted() with text blocks ---");
         String name = "Bob";
         int age = 25;
@@ -473,7 +481,7 @@ public class OtherChanges {
 
         // ---- translateEscapes() ----
         System.out.println("--- translateEscapes() ---");
-        // Imagine reading "Hello\\nWorld\\tJava" from a config file
+        // Wyobraź sobie odczyt "Hello\\nWorld\\tJava" z pliku konfiguracyjnego
         String rawInput = "Hello\\nWorld\\tJava";
         System.out.println("Raw input:        [" + rawInput + "]");
         System.out.println("translateEscapes: [" + rawInput.translateEscapes() + "]");
@@ -483,13 +491,13 @@ public class OtherChanges {
     }
 
     // ============================================================
-    // Section 4: Text Blocks -- Practical Patterns
+    // Sekcja 4: Bloki tekstowe — Wzorce praktyczne
     // ============================================================
 
     static void textBlocksPracticalPatterns() {
         System.out.println("\n=== Section 4: Text Blocks -- Practical Patterns ===");
 
-        // ---- JSON generation with .formatted() ----
+        // ---- Generowanie JSON z .formatted() ----
         System.out.println("--- JSON generation with .formatted() ---");
         String jsonTemplate = """
                 {
@@ -504,7 +512,7 @@ public class OtherChanges {
         String json = jsonTemplate.formatted("Charlie", 28, true, 1234.56);
         System.out.println(json);
 
-        // ---- HTML page template ----
+        // ---- Szablon strony HTML ----
         System.out.println("--- HTML page template ---");
         String title = "My Page";
         String heading = "Welcome";
@@ -524,7 +532,7 @@ public class OtherChanges {
                 """.formatted(title, heading, content);
         System.out.println(htmlPage);
 
-        // ---- Parameterized SQL ----
+        // ---- Sparametryzowany SQL ----
         System.out.println("--- Parameterized SQL ---");
         String table = "products";
         double minPrice = 50.0;
@@ -540,7 +548,7 @@ public class OtherChanges {
                 """.formatted(table, minPrice, limit);
         System.out.println(sqlQuery);
 
-        // ---- Complex regex with line continuation ----
+        // ---- Złożone wyrażenie regularne z kontynuacją linii ----
         System.out.println("--- Complex regex with line continuation ---");
         String emailRegex = """
                 ^[a-zA-Z0-9._%+\\-]+\
@@ -554,7 +562,7 @@ public class OtherChanges {
         System.out.println("Matches not-an-email: " +
                 "not-an-email".matches(emailRegex));
 
-        // ---- Code generation ----
+        // ---- Generowanie kodu ----
         System.out.println("\n--- Code generation ---");
         String className = "Person";
         String field1 = "name";
@@ -592,26 +600,26 @@ public class OtherChanges {
     }
 
     // ============================================================
-    // Section 5: The @Serial Annotation
+    // Sekcja 5: Adnotacja @Serial
     // ============================================================
 
     static void serialAnnotation() {
         System.out.println("\n=== Section 5: The @Serial Annotation ===");
 
-        // ---- SerializableUser: serialize + deserialize round-trip ----
+        // ---- SerializableUser: serializacja + deserializacja (round-trip) ----
         System.out.println("--- SerializableUser: serialize + deserialize ---");
         var user = new SerializableUser("Alice", 30);
         System.out.println("Original: " + user);
 
         try {
-            // Serialize
+            // Serializacja
             var baos = new ByteArrayOutputStream();
             var oos = new ObjectOutputStream(baos);
             oos.writeObject(user);
             oos.close();
             System.out.println("Serialized to " + baos.size() + " bytes");
 
-            // Deserialize
+            // Deserializacja
             var bais = new ByteArrayInputStream(baos.toByteArray());
             var ois = new ObjectInputStream(bais);
             var deserialized = (SerializableUser) ois.readObject();
@@ -623,20 +631,20 @@ public class OtherChanges {
             System.out.println("Error: " + e.getMessage());
         }
 
-        // ---- SingletonConfig: readResolve preserves identity ----
+        // ---- SingletonConfig: readResolve zachowuje tożsamość ----
         System.out.println("\n--- SingletonConfig: readResolve preserves identity ---");
         var config = SingletonConfig.INSTANCE;
         System.out.println("Original instance: " + config);
         System.out.println("Is INSTANCE: " + (config == SingletonConfig.INSTANCE));
 
         try {
-            // Serialize the singleton
+            // Serializacja singletona
             var baos = new ByteArrayOutputStream();
             var oos = new ObjectOutputStream(baos);
             oos.writeObject(config);
             oos.close();
 
-            // Deserialize -- readResolve should return INSTANCE
+            // Deserializacja — readResolve powinno zwrócić INSTANCE
             var bais = new ByteArrayInputStream(baos.toByteArray());
             var ois = new ObjectInputStream(bais);
             var deserialized = (SingletonConfig) ois.readObject();
@@ -649,7 +657,7 @@ public class OtherChanges {
             System.out.println("Error: " + e.getMessage());
         }
 
-        // ---- What @Serial catches ----
+        // ---- Co wyłapuje @Serial ----
         System.out.println("\n--- What @Serial catches (compile-time) ---");
         System.out.println("@Serial on serialVersionUID -- catches wrong type or non-static");
         System.out.println("@Serial on writeObject      -- catches wrong name or wrong params");
@@ -661,24 +669,24 @@ public class OtherChanges {
     }
 
     // ============================================================
-    // Section 6: Other Notable Java 12-17 Additions
+    // Sekcja 6: Inne istotne dodatki Javy 12-17
     // ============================================================
 
     static void otherJava12to17Additions() {
         System.out.println("\n=== Section 6: Other Notable Java 12-17 Additions ===");
 
-        // ---- Helpful NullPointerExceptions (Java 14) ----
+        // ---- Pomocne NullPointerException (Java 14) ----
         System.out.println("--- Helpful NullPointerExceptions (Java 14) ---");
         try {
             String[] names = {"Alice", null, "Charlie"};
-            int len = names[1].length();  // will throw NPE with helpful message
+            int len = names[1].length();  // rzuci NPE z pomocnym komunikatem
             System.out.println(len);
         } catch (NullPointerException e) {
             System.out.println("NPE message: " + e.getMessage());
             System.out.println("(Before Java 14, this would just say 'null')");
         }
 
-        // Chained access NPE
+        // NPE przy łańcuchowym dostępie
         try {
             Map<String, List<String>> map = new HashMap<>();
             map.put("key", null);
@@ -693,7 +701,7 @@ public class OtherChanges {
 
         var numbers = List.of(1, 2, 3, 4, 5);
 
-        // toList() -- returns unmodifiable list
+        // toList() — zwraca niemodyfikowalną listę
         List<Integer> unmodifiable = numbers.stream()
                 .filter(n -> n > 2)
                 .toList();
@@ -706,7 +714,7 @@ public class OtherChanges {
             System.out.println("toList() is UNMODIFIABLE: cannot add elements");
         }
 
-        // Collectors.toList() -- returns mutable ArrayList
+        // Collectors.toList() — zwraca mutowalny ArrayList
         List<Integer> mutable = numbers.stream()
                 .filter(n -> n > 2)
                 .collect(Collectors.toList());
@@ -714,7 +722,7 @@ public class OtherChanges {
         mutable.add(99);
         System.out.println("After adding 99:     " + mutable + " (mutable!)");
 
-        // ---- String.indent() and String.transform() (Java 12) ----
+        // ---- String.indent() i String.transform() (Java 12) ----
         System.out.println("\n--- String.indent() (Java 12) ---");
 
         String text = "Line one\nLine two\nLine three";
@@ -736,7 +744,7 @@ public class OtherChanges {
                 .transform(s -> s.replace(" ", "-"));
         System.out.println("Chained transform: " + result);
 
-        // transform can change the return type
+        // transform może zmienić typ zwracany
         int wordCount = "one two three four five"
                 .transform(s -> s.split(" ").length);
         System.out.println("Word count via transform: " + wordCount);
@@ -761,7 +769,7 @@ public class OtherChanges {
         Path file1 = null;
         Path file2 = null;
         try {
-            // Create two identical temp files
+            // Tworzenie dwóch identycznych plików tymczasowych
             file1 = Files.createTempFile("mismatch-test-1-", ".txt");
             file2 = Files.createTempFile("mismatch-test-2-", ".txt");
 
@@ -771,13 +779,13 @@ public class OtherChanges {
             long mismatchPos = Files.mismatch(file1, file2);
             System.out.println("Identical files -- mismatch position: " + mismatchPos + " (-1 = identical)");
 
-            // Modify file2
+            // Modyfikacja file2
             Files.writeString(file2, "Hello, World!\nLine TWO.\n");
             mismatchPos = Files.mismatch(file1, file2);
             System.out.println("Different files -- mismatch position: " + mismatchPos);
             System.out.println("  (difference starts at byte " + mismatchPos + ")");
 
-            // Different lengths
+            // Różne długości
             Files.writeString(file2, "Hello, World!\nLine two.\nExtra line.\n");
             mismatchPos = Files.mismatch(file1, file2);
             System.out.println("Different length -- mismatch position: " + mismatchPos);
@@ -788,13 +796,13 @@ public class OtherChanges {
                 if (file1 != null) Files.deleteIfExists(file1);
                 if (file2 != null) Files.deleteIfExists(file2);
             } catch (IOException ignored) {
-                // cleanup best-effort
+                // czyszczenie — najlepszy wysiłek
             }
         }
     }
 
     // ============================================================
-    // Main -- run all sections
+    // Main — uruchomienie wszystkich sekcji
     // ============================================================
 
     public static void main(String[] args) {

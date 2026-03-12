@@ -9,23 +9,23 @@ import java.util.stream.*;
 
 public class Exercises {
 
-    // ---- Helper types ----
+    // ---- Typy pomocnicze ----
 
     record ConfigEntry(String key, String value) {}
 
     // ============================================================
-    // Exercise 1: Config File Parser
+    // Ćwiczenie 1: Parser pliku konfiguracyjnego
     // ============================================================
 
     /**
-     * Parse a multi-line configuration string into a list of {@link ConfigEntry} records.
+     * Parsuje wieloliniowy ciąg konfiguracyjny do listy rekordów {@link ConfigEntry}.
      *
-     * <p>The input is a single string containing multiple lines, each in the format
-     * {@code key=value}. Lines that are blank or start with {@code #} (comments)
-     * should be ignored. Keys and values should be stripped of leading/trailing
-     * whitespace.</p>
+     * <p>Dane wejściowe to pojedynczy ciąg znaków zawierający wiele linii, każda w formacie
+     * {@code klucz=wartość}. Linie puste lub zaczynające się od {@code #} (komentarze)
+     * powinny być pomijane. Klucze i wartości powinny mieć usunięte wiodące/końcowe
+     * białe znaki.</p>
      *
-     * <p>Example input:
+     * <p>Przykładowe dane wejściowe:
      * <pre>{@code
      * # Database config
      * db.host = localhost
@@ -34,24 +34,24 @@ public class Exercises {
      * db.name = mydb
      * }</pre>
      *
-     * <p><b>Hints:</b> Use {@code String.lines()}, {@code String.isBlank()},
-     * {@code String.strip()}, {@code Predicate.not()}, and {@code var}
-     * for local variable declarations.</p>
+     * <p><b>Wskazówki:</b> Użyj {@code String.lines()}, {@code String.isBlank()},
+     * {@code String.strip()}, {@code Predicate.not()} oraz {@code var}
+     * do deklaracji zmiennych lokalnych.</p>
      */
     static List<ConfigEntry> parseConfig(String configText) {
         throw new UnsupportedOperationException();
     }
 
     // ============================================================
-    // Exercise 2: File Inventory Report
+    // Ćwiczenie 2: Raport inwentaryzacji plików
     // ============================================================
 
     /**
-     * Generate a formatted text report of files grouped by extension.
+     * Generuje sformatowany raport tekstowy plików pogrupowanych według rozszerzenia.
      *
-     * <p>Given a list of file names (e.g. {@code "report.pdf"}, {@code "data.csv"})
-     * and a corresponding list of sizes in bytes, group the files by their extension
-     * and produce a report string like:</p>
+     * <p>Na podstawie listy nazw plików (np. {@code "report.pdf"}, {@code "data.csv"})
+     * i odpowiadającej im listy rozmiarów w bajtach, grupuje pliki według rozszerzenia
+     * i tworzy raport w postaci:</p>
      * <pre>{@code
      * csv
      *   data.csv           1024
@@ -60,33 +60,33 @@ public class Exercises {
      *   report.pdf         4096
      * }</pre>
      *
-     * <p>Extensions should be sorted alphabetically. Files within each group should
-     * appear in their original order. Use {@code String.repeat()} to align columns.</p>
+     * <p>Rozszerzenia powinny być posortowane alfabetycznie. Pliki w każdej grupie powinny
+     * występować w oryginalnej kolejności. Użyj {@code String.repeat()} do wyrównania kolumn.</p>
      *
-     * <p><b>Hints:</b> Use {@code var}, streams with {@code Collectors.groupingBy},
-     * {@code String.repeat()}, and {@code Predicate.not()} to filter out files
-     * without extensions.</p>
+     * <p><b>Wskazówki:</b> Użyj {@code var}, Stream z {@code Collectors.groupingBy},
+     * {@code String.repeat()} oraz {@code Predicate.not()} do filtrowania plików
+     * bez rozszerzenia.</p>
      */
     static String fileInventoryReport(List<String> fileNames, List<Long> sizes) {
         throw new UnsupportedOperationException();
     }
 
     // ============================================================
-    // Exercise 3: HTTP Health Checker
+    // Ćwiczenie 3: Sprawdzanie stanu HTTP
     // ============================================================
 
     /**
-     * Check the health of multiple HTTP endpoints and aggregate results.
+     * Sprawdza stan wielu endpointów HTTP i agreguje wyniki.
      *
-     * <p>Given a list of URL strings, send a GET request to each one.
-     * Return a {@code Map<String, String>} where each key is the URL
-     * and each value is either {@code "UP"} (HTTP 2xx) or {@code "DOWN"}
-     * (any other status or exception).</p>
+     * <p>Na podstawie listy ciągów URL, wysyła żądanie GET do każdego z nich.
+     * Zwraca {@code Map<String, String>}, gdzie każdy klucz to URL,
+     * a każda wartość to {@code "UP"} (HTTP 2xx) lub {@code "DOWN"}
+     * (inny status lub wyjątek).</p>
      *
-     * <p><b>Hints:</b> Use {@code HttpClient.newHttpClient()},
-     * {@code HttpRequest.newBuilder()}, {@code HttpResponse.BodyHandlers.discarding()},
-     * and {@code var} for local type inference. Wrap each call in a try-catch
-     * to handle connection failures gracefully.</p>
+     * <p><b>Wskazówki:</b> Użyj {@code HttpClient.newHttpClient()},
+     * {@code HttpRequest.newBuilder()}, {@code HttpResponse.BodyHandlers.discarding()}
+     * oraz {@code var} do wnioskowania typów lokalnych. Owiń każde wywołanie w try-catch,
+     * aby obsłużyć błędy połączenia w sposób graceful.</p>
      */
     static Map<String, String> checkEndpoints(List<String> urls) {
         throw new UnsupportedOperationException();

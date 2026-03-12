@@ -7,7 +7,7 @@ import java.util.stream.*;
 
 public class Exercises {
 
-    // ---- Helper types ----
+    // ---- Typy pomocnicze ----
 
     record Transaction(String id, String category, double amount, LocalDate date) {}
 
@@ -23,68 +23,68 @@ public class Exercises {
     }
 
     // ============================================================
-    // Exercise 1: Transaction Analytics Pipeline
+    // Ćwiczenie 1: Potok analityki transakcji
     // ============================================================
 
     /**
-     * Summarize total spending by category for transactions in a given month.
+     * Podsumuj łączne wydatki według kategorii dla transakcji w danym miesiącu.
      *
-     * <p>Given a list of transactions and a target {@link YearMonth}, return a
-     * {@code Map<String, Double>} where each key is a category and each value
-     * is the total amount spent in that category during the target month.</p>
+     * <p>Mając listę transakcji i docelowy {@link YearMonth}, zwróć
+     * {@code Map<String, Double>}, gdzie każdy klucz to kategoria, a każda wartość
+     * to łączna kwota wydana w tej kategorii w docelowym miesiącu.</p>
      *
-     * <p><b>Hints:</b> Use {@code Stream.filter} to select the month,
-     * {@code Collectors.groupingBy} with {@code Collectors.summingDouble}
-     * to aggregate, and lambdas / method references where appropriate.</p>
+     * <p><b>Wskazówki:</b> Użyj {@code Stream.filter} do wybrania miesiąca,
+     * {@code Collectors.groupingBy} z {@code Collectors.summingDouble}
+     * do agregacji, oraz lambd / referencji do metod tam, gdzie to stosowne.</p>
      */
     static Map<String, Double> spendingByCategory(List<Transaction> transactions, YearMonth month) {
         throw new UnsupportedOperationException();
     }
 
     // ============================================================
-    // Exercise 2: Composable Log Processor
+    // Ćwiczenie 2: Komponowalny procesor logów
     // ============================================================
 
     /**
-     * Build a reusable log-processing pipeline that extracts log levels from raw lines.
+     * Zbuduj wielokrotnego użytku potok przetwarzania logów, który wyodrębnia poziomy logów z surowych linii.
      *
-     * <p>Each raw log line may look like {@code "2024-01-15 ERROR Something failed"}.
-     * Using the custom {@link Mapper} functional interface:</p>
+     * <p>Każda surowa linia logu może wyglądać jak {@code "2024-01-15 ERROR Something failed"}.
+     * Używając niestandardowego interfejsu funkcyjnego {@link Mapper}:</p>
      * <ol>
-     *   <li>Create a {@code Mapper<String, Optional<String>>} that returns the second
-     *       token (the log level) wrapped in an {@code Optional}, or empty if the line
-     *       has fewer than two tokens.</li>
-     *   <li>Compose it with another mapper that uppercases the value (use {@code andThen}).</li>
-     *   <li>Apply the composed pipeline to a stream of log lines and collect distinct,
-     *       non-empty log levels into a sorted {@code List<String>}.</li>
+     *   <li>Utwórz {@code Mapper<String, Optional<String>>}, który zwraca drugi
+     *       token (poziom logu) opakowany w {@code Optional}, lub pusty, jeśli linia
+     *       ma mniej niż dwa tokeny.</li>
+     *   <li>Skomponuj go z innym mapperem, który zamienia wartość na wielkie litery (użyj {@code andThen}).</li>
+     *   <li>Zastosuj skomponowany potok do strumienia linii logów i zbierz unikalne,
+     *       niepuste poziomy logów do posortowanej {@code List<String>}.</li>
      * </ol>
      *
-     * <p><b>Hints:</b> Use {@code Stream.map}, {@code Optional.stream} (or
-     * {@code flatMap}), and the custom {@code Mapper.andThen} default method.</p>
+     * <p><b>Wskazówki:</b> Użyj {@code Stream.map}, {@code Optional.stream} (lub
+     * {@code flatMap}) oraz niestandardowej metody domyślnej {@code Mapper.andThen}.</p>
      */
     static List<String> extractLogLevels(List<String> rawLines) {
         throw new UnsupportedOperationException();
     }
 
     // ============================================================
-    // Exercise 3: Employee Meeting Scheduler
+    // Ćwiczenie 3: Planowanie spotkań pracowników
     // ============================================================
 
     /**
-     * Find employees available for a meeting at a given day and time range.
+     * Znajdź pracowników dostępnych na spotkanie w danym dniu i zakresie czasowym.
      *
-     * <p>An employee is available if:</p>
+     * <p>Pracownik jest dostępny, jeśli:</p>
      * <ul>
-     *   <li>The meeting day's {@link DayOfWeek} is in their {@code workingDays} set.</li>
-     *   <li>The meeting's {@code startTime} and {@code endTime} fall within their
-     *       working hours ({@code startHour} to {@code endHour}).</li>
+     *   <li>{@link DayOfWeek} dnia spotkania znajduje się w jego zbiorze {@code workingDays}.</li>
+     *   <li>{@code startTime} i {@code endTime} spotkania mieszczą się w jego
+     *       godzinach pracy ({@code startHour} do {@code endHour}).</li>
      * </ul>
      *
-     * <p>Return a single {@code String} listing available employee names separated
-     * by {@code ", "} (e.g. {@code "Alice, Bob, Carol"}).</p>
+     * <p>Zwróć pojedynczy {@code String} z listą dostępnych pracowników oddzielonych
+     * {@code ", "} (np. {@code "Alice, Bob, Carol"}).</p>
      *
-     * <p><b>Hints:</b> Use {@code Predicate} composition ({@code and}),
-     * {@code Stream.filter}, and {@code Collectors.joining} or {@link StringJoiner}.</p>
+     * <p><b>Wskazówki:</b> Użyj kompozycji {@code Predicate} ({@code and}),
+     * {@code Stream.filter} oraz {@code Collectors.joining} lub {@link StringJoiner}.</p>
      */
     static String findAvailableEmployees(List<Employee> employees,
                                          LocalDate meetingDay,

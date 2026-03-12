@@ -6,7 +6,7 @@ import java.util.stream.*;
 
 public class Exercises {
 
-    // ---- Helper types for Exercise 1: Financial Ledger ----
+    // ---- Typy pomocnicze dla ćwiczenia 1: Księga finansowa ----
 
     record Money(String currency, double amount) {}
 
@@ -15,7 +15,7 @@ public class Exercises {
         record Refund(Money money, String reason) implements FinancialEvent {}
     }
 
-    // ---- Helper types for Exercise 2: Event Stream Classifier ----
+    // ---- Typy pomocnicze dla ćwiczenia 2: Klasyfikator strumienia zdarzeń ----
 
     sealed interface AppEvent permits AppEvent.UserLogin, AppEvent.UserLogout,
             AppEvent.PageView, AppEvent.ApiCall {
@@ -26,26 +26,26 @@ public class Exercises {
     }
 
     // ============================================================
-    // Exercise 1: Financial Ledger Reconciliation
+    // Ćwiczenie 1: Uzgadnianie księgi finansowej
     // ============================================================
 
     /**
-     * Reconcile a list of financial events into per-currency balances.
+     * Uzgodnij listę zdarzeń finansowych do sald w rozbiciu na waluty.
      *
-     * <p>Given a {@link SequencedCollection} of {@link FinancialEvent}s:</p>
+     * <p>Mając {@link SequencedCollection} obiektów {@link FinancialEvent}:</p>
      * <ul>
-     *   <li>Payments <b>add</b> to the balance for that currency.</li>
-     *   <li>Refunds <b>subtract</b> from the balance.</li>
+     *   <li>Płatności <b>dodają</b> do salda danej waluty.</li>
+     *   <li>Zwroty <b>odejmują</b> od salda.</li>
      * </ul>
      *
-     * <p>Return a {@link SequencedMap} (e.g. {@link LinkedHashMap}) of
-     * {@code currency -> net balance}, ordered by first appearance of each
-     * currency. Also print the first and last events processed using
-     * {@code getFirst()} / {@code getLast()}.</p>
+     * <p>Zwróć {@link SequencedMap} (np. {@link LinkedHashMap}) mapującą
+     * {@code waluta -> saldo netto}, uporządkowaną według pierwszego wystąpienia
+     * każdej waluty. Wypisz również pierwsze i ostatnie przetworzone zdarzenie
+     * za pomocą {@code getFirst()} / {@code getLast()}.</p>
      *
-     * <p><b>Hints:</b> Use record patterns in switch to destructure
-     * {@code Payment(Money(currency, amount), _)} with unnamed variables
-     * for fields you don't need. Use sequenced collection methods
+     * <p><b>Wskazówki:</b> Użyj wzorców rekordów w switch, aby zdestrukturyzować
+     * {@code Payment(Money(currency, amount), _)} z nienazwanymi zmiennymi
+     * dla pól, których nie potrzebujesz. Użyj metod kolekcji sekwencyjnych
      * ({@code getFirst}, {@code getLast}).</p>
      */
     static SequencedMap<String, Double> reconcile(SequencedCollection<FinancialEvent> events) {
@@ -53,54 +53,54 @@ public class Exercises {
     }
 
     // ============================================================
-    // Exercise 2: Event Stream Classifier
+    // Ćwiczenie 2: Klasyfikator strumienia zdarzeń
     // ============================================================
 
     /**
-     * Classify application events into severity categories using fine-grained rules.
+     * Klasyfikuj zdarzenia aplikacji do kategorii ważności przy użyciu szczegółowych reguł.
      *
-     * <p>Classification rules:</p>
+     * <p>Reguły klasyfikacji:</p>
      * <ul>
-     *   <li>{@code UserLogin} with {@code suspicious == true} → {@code "ALERT"}</li>
-     *   <li>{@code UserLogin} (normal) → {@code "INFO"}</li>
+     *   <li>{@code UserLogin} z {@code suspicious == true} → {@code "ALERT"}</li>
+     *   <li>{@code UserLogin} (normalny) → {@code "INFO"}</li>
      *   <li>{@code UserLogout} → {@code "INFO"}</li>
-     *   <li>{@code PageView} with {@code durationMs > 30_000} → {@code "WARNING"} (slow page)</li>
-     *   <li>{@code PageView} (normal) → {@code "INFO"}</li>
-     *   <li>{@code ApiCall} with {@code statusCode >= 500} → {@code "ALERT"}</li>
-     *   <li>{@code ApiCall} with {@code statusCode >= 400} → {@code "WARNING"}</li>
-     *   <li>{@code ApiCall} with {@code latencyMs > 5000} → {@code "WARNING"} (slow API)</li>
-     *   <li>{@code ApiCall} (normal) → {@code "INFO"}</li>
+     *   <li>{@code PageView} z {@code durationMs > 30_000} → {@code "WARNING"} (wolna strona)</li>
+     *   <li>{@code PageView} (normalny) → {@code "INFO"}</li>
+     *   <li>{@code ApiCall} z {@code statusCode >= 500} → {@code "ALERT"}</li>
+     *   <li>{@code ApiCall} z {@code statusCode >= 400} → {@code "WARNING"}</li>
+     *   <li>{@code ApiCall} z {@code latencyMs > 5000} → {@code "WARNING"} (wolne API)</li>
+     *   <li>{@code ApiCall} (normalny) → {@code "INFO"}</li>
      * </ul>
      *
-     * <p>Return a {@code Map<String, List<AppEvent>>} grouping events by their
-     * severity category.</p>
+     * <p>Zwróć {@code Map<String, List<AppEvent>>} grupującą zdarzenia według ich
+     * kategorii ważności.</p>
      *
-     * <p><b>Hints:</b> Use pattern matching for switch with guarded patterns
-     * ({@code when}), record patterns for destructuring, unnamed variables
-     * ({@code _}) for unused components, and {@code Collectors.groupingBy}.</p>
+     * <p><b>Wskazówki:</b> Użyj dopasowania wzorców w switch ze wzorcami warunkowanymi
+     * ({@code when}), wzorcami rekordów do destrukturyzacji, nienazwanymi zmiennymi
+     * ({@code _}) dla nieużywanych komponentów oraz {@code Collectors.groupingBy}.</p>
      */
     static Map<String, List<AppEvent>> classifyEvents(List<AppEvent> events) {
         throw new UnsupportedOperationException();
     }
 
     // ============================================================
-    // Exercise 3: Parallel Sensor Aggregation
+    // Ćwiczenie 3: Równoległa agregacja czujników
     // ============================================================
 
     /**
-     * Compute per-sensor average readings concurrently using virtual threads.
+     * Oblicz średnie odczyty per czujnik współbieżnie przy użyciu virtual threads.
      *
-     * <p>Given a {@code Map<String, List<Double>>} where each key is a sensor
-     * ID and each value is a list of raw readings, compute the average for each
-     * sensor. Each sensor's computation should run on its own virtual thread.</p>
+     * <p>Mając {@code Map<String, List<Double>>}, gdzie każdy klucz to identyfikator
+     * czujnika, a każda wartość to lista surowych odczytów, oblicz średnią dla każdego
+     * czujnika. Obliczenia każdego czujnika powinny działać na własnym virtual thread.</p>
      *
-     * <p>Return a {@link SequencedMap} of {@code sensorId -> average}, ordered
-     * alphabetically by sensor ID. Use {@code getFirst()} and {@code getLast()}
-     * on the result to print the first and last sensor entries.</p>
+     * <p>Zwróć {@link SequencedMap} mapującą {@code identyfikatorCzujnika -> średnia},
+     * uporządkowaną alfabetycznie po identyfikatorze czujnika. Użyj {@code getFirst()}
+     * i {@code getLast()} na wyniku, aby wypisać pierwszy i ostatni wpis czujnika.</p>
      *
-     * <p><b>Hints:</b> Use {@code Thread.ofVirtual().start()},
-     * {@link ConcurrentHashMap} for thread-safe accumulation,
-     * and sequenced collection methods on the final sorted result.</p>
+     * <p><b>Wskazówki:</b> Użyj {@code Thread.ofVirtual().start()},
+     * {@link ConcurrentHashMap} do bezpiecznej wątkowo akumulacji
+     * oraz metod kolekcji sekwencyjnych na końcowym posortowanym wyniku.</p>
      */
     static SequencedMap<String, Double> aggregateSensors(Map<String, List<Double>> sensorData)
             throws InterruptedException {

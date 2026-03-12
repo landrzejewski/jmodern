@@ -3,244 +3,244 @@ package pl.training.jmodern.module02_java21;
 import java.util.*;
 
 // ============================================================
-// Section 1: Pattern Matching for switch -- Type Patterns and Null
+// Sekcja 1: Dopasowanie wzorców w switch -- Wzorce typów i null
 // ============================================================
 
 /*
-## Pattern Matching for switch -- Type Patterns and Null
+## Dopasowanie wzorców w switch -- Wzorce typów i null
 
-- JEP 441 finalized pattern matching for switch in Java 21,
-  after preview rounds in Java 17 (JEP 406), 18, 19, 20.
-- **Type patterns in switch**: You can now write
-  case String s -> ... to match and bind in one step. This
-  replaces verbose instanceof + cast chains with a single
-  switch expression or statement.
-- **Switching on Object**: Prior to Java 21, switch only
-  supported a few types (int, String, enum). Now you can
-  switch on any reference type and match with type patterns.
-- **case null**: Before Java 21, passing null to a switch
-  always threw NullPointerException. Now you can explicitly
-  handle null with case null -> ... which prevents the NPE.
-  You can also combine null with default: case null, default ->
-- **Exhaustiveness with sealed types**: When the switch
-  expression covers all permitted subtypes of a sealed
-  interface, no default branch is required. The compiler
-  verifies exhaustiveness at compile time.
-- **Difference from Java 17 previews**: The syntax is the
-  same, but Java 21 is the first version where this is a
-  permanent, non-preview feature. Code using it no longer
-  needs --enable-preview.
+- JEP 441 sfinalizował dopasowanie wzorców w switch w Java 21,
+  po rundach podglądu w Java 17 (JEP 406), 18, 19, 20.
+- **Wzorce typów w switch**: Można teraz napisać
+  case String s -> ... aby dopasować i powiązać w jednym kroku. Zastępuje
+  to rozwlekłe łańcuchy instanceof + rzutowanie jednym wyrażeniem
+  switch lub instrukcją.
+- **Switch na Object**: Przed Java 21 switch obsługiwał tylko
+  kilka typów (int, String, enum). Teraz można wykonać switch
+  na dowolnym typie referencyjnym i dopasować za pomocą wzorców typów.
+- **case null**: Przed Java 21 przekazanie null do switch
+  zawsze rzucało NullPointerException. Teraz można jawnie
+  obsłużyć null za pomocą case null -> ..., co zapobiega NPE.
+  Można również połączyć null z default: case null, default ->
+- **Wyczerpywalność z typami zapieczętowanymi**: Gdy wyrażenie switch
+  pokrywa wszystkie dozwolone podtypy zapieczętowanego
+  interfejsu, gałąź default nie jest wymagana. Kompilator
+  weryfikuje wyczerpywalność w czasie kompilacji.
+- **Różnica od podglądów w Java 17**: Składnia jest taka sama,
+  ale Java 21 to pierwsza wersja, w której jest to stała,
+  nie-podglądowa funkcjonalność. Kod, który jej używa, nie wymaga
+  już --enable-preview.
 */
 
 // ============================================================
-// Section 2: Pattern Matching for switch -- Guarded Patterns and Dominance
+// Sekcja 2: Dopasowanie wzorców w switch -- Wzorce warunkowane i dominacja
 // ============================================================
 
 /*
-## Pattern Matching for switch -- Guarded Patterns and Dominance
+## Dopasowanie wzorców w switch -- Wzorce warunkowane i dominacja
 
-- **Guarded patterns** use the when keyword to add a boolean
-  condition to a case label:
+- **Wzorce warunkowane** używają słowa kluczowego when do dodania
+  warunku logicznego do etykiety case:
       case String s when s.length() > 5 -> ...
-  The pattern matches only if the type matches AND the guard
-  evaluates to true. This replaces nested if-else inside case
-  bodies.
-- **Dominance rules**: A more specific pattern must appear
-  before a more general one. For example, case String s must
-  come before case Object o, and a guarded case must come
-  before its unguarded counterpart. Violating dominance is a
-  compile-time error -- unlike if-else chains where ordering
-  bugs are silent.
-- **Combining type + guard** enables rich dispatch logic that
-  was previously only possible with long if-else chains or
-  the visitor pattern.
-- **Sealed types + guards**: You can combine sealed-type
-  exhaustiveness with when guards to create powerful yet
-  type-safe dispatch. The compiler still checks that all
-  permitted subtypes are covered.
+  Wzorzec pasuje tylko jeśli typ pasuje ORAZ warunek
+  ewaluuje się do true. Zastępuje to zagnieżdżone if-else wewnątrz
+  ciał case.
+- **Reguły dominacji**: Bardziej szczegółowy wzorzec musi pojawić się
+  przed bardziej ogólnym. Na przykład case String s musi
+  być przed case Object o, a warunkowany case musi być
+  przed swoim bezwarunkowym odpowiednikiem. Naruszenie dominacji jest
+  błędem kompilacji -- w przeciwieństwie do łańcuchów if-else, gdzie błędy
+  kolejności są ciche.
+- **Łączenie typu + warunku** umożliwia bogatą logikę rozdzielania,
+  która wcześniej była możliwa tylko z długimi łańcuchami if-else lub
+  wzorcem wizytatora.
+- **Typy zapieczętowane + warunki**: Można łączyć wyczerpywalność
+  typów zapieczętowanych z warunkami when, tworząc potężne, a zarazem
+  bezpieczne typowo rozdzielanie. Kompilator nadal sprawdza, czy
+  wszystkie dozwolone podtypy są pokryte.
 */
 
 // ============================================================
-// Section 3: Record Patterns -- Deconstruction
+// Sekcja 3: Wzorce rekordów -- Destrukturyzacja
 // ============================================================
 
 /*
-## Record Patterns -- Deconstruction
+## Wzorce rekordów -- Destrukturyzacja
 
-- JEP 440 finalized record patterns in Java 21 (previewed
-  in Java 19 and 20).
-- **Syntax**: case Point(var x, var y) -> ... destructures
-  a record directly in the case label, binding its components
-  to local variables.
-- You can use explicit types (case Point(double x, double y))
-  or var for type inference.
-- Record patterns work in both switch and instanceof:
+- JEP 440 sfinalizował wzorce rekordów w Java 21 (podgląd
+  w Java 19 i 20).
+- **Składnia**: case Point(var x, var y) -> ... destrukturyzuje
+  rekord bezpośrednio w etykiecie case, wiążąc jego składowe
+  ze zmiennymi lokalnymi.
+- Można użyć jawnych typów (case Point(double x, double y))
+  lub var do inferencji typów.
+- Wzorce rekordów działają zarówno w switch, jak i instanceof:
       if (obj instanceof Point(var x, var y)) { ... }
-- **Structural decomposition vs accessor calls**: Record
-  patterns decompose the structure in one step, rather than
-  calling p.x() and p.y() separately. This is especially
-  powerful when nested (see Section 4).
-- **Records only**: Record patterns only work with record
-  types. Regular classes cannot be deconstructed this way
-  (unless future JEPs add deconstruction patterns for classes).
-- **Difference from the Java 17 module teaser**: Records.java
-  Section 5 briefly showed the idea. Here we go deeper with
-  multiple components, combinations with when guards, and
-  practical classification examples.
+- **Dekompozycja strukturalna vs wywołania akcesorów**: Wzorce
+  rekordów dekomponują strukturę w jednym kroku, zamiast
+  wywoływać p.x() i p.y() osobno. Jest to szczególnie
+  potężne przy zagnieżdżeniu (patrz Sekcja 4).
+- **Tylko rekordy**: Wzorce rekordów działają tylko z typami
+  rekordów. Zwykłe klasy nie mogą być dekonstruowane w ten sposób
+  (chyba że przyszłe JEP-y dodadzą wzorce dekonstrukcji dla klas).
+- **Różnica od zapowiedzi w module Java 17**: Records.java
+  Sekcja 5 krótko pokazała tę ideę. Tutaj zagłębiamy się w
+  wiele składowych, kombinacje z warunkami when i
+  praktyczne przykłady klasyfikacji.
 */
 
 // ============================================================
-// Section 4: Record Patterns -- Nested and Complex Patterns
+// Sekcja 4: Wzorce rekordów -- Zagnieżdżone i złożone wzorce
 // ============================================================
 
 /*
-## Record Patterns -- Nested and Complex Patterns
+## Wzorce rekordów -- Zagnieżdżone i złożone wzorce
 
-- Record patterns can be **nested**: if a record's component
-  is itself a record, you can deconstruct both levels at once:
+- Wzorce rekordów mogą być **zagnieżdżone**: jeśli składowa rekordu
+  jest sama w sobie rekordem, można dekonstruować oba poziomy naraz:
       case ColoredPoint(Point(var x, var y), var color) -> ...
-  This eliminates intermediate variables and expresses intent
-  more directly.
-- **Recursive pattern matching**: Sealed interface hierarchies
-  (like expression trees) are a natural fit. You can evaluate
-  an expression tree with a single switch using nested record
-  patterns -- no visitor pattern needed.
-- **Combining nested patterns with when guards** lets you
-  express complex conditions concisely, e.g., matching a pair
-  where the first element satisfies some condition.
-- **Practical ADT (Algebraic Data Type) processing**: Sealed
-  interfaces + records + pattern matching together give Java
-  a form of algebraic data types similar to Scala case classes
-  or Rust enums with match.
+  Eliminuje to zmienne pośrednie i wyraża intencję
+  bardziej bezpośrednio.
+- **Rekurencyjne dopasowanie wzorców**: Hierarchie zapieczętowanych
+  interfejsów (jak drzewa wyrażeń) są naturalnym zastosowaniem.
+  Można ewaluować drzewo wyrażeń jednym switch używając zagnieżdżonych
+  wzorców rekordów -- bez potrzeby wzorca wizytatora.
+- **Łączenie zagnieżdżonych wzorców z warunkami when** pozwala
+  zwięźle wyrażać złożone warunki, np. dopasowanie pary,
+  w której pierwszy element spełnia pewien warunek.
+- **Praktyczne przetwarzanie ADT (algebraiczny typ danych)**: Zapieczętowane
+  interfejsy + rekordy + dopasowanie wzorców razem dają Javie
+  formę algebraicznych typów danych podobną do case classes w Scali
+  lub enumów z match w Rust.
 */
 
 // ============================================================
-// Section 5: Sequenced Collections -- SequencedCollection and SequencedSet
+// Sekcja 5: Kolekcje sekwencyjne -- SequencedCollection i SequencedSet
 // ============================================================
 
 /*
-## Sequenced Collections -- SequencedCollection and SequencedSet
+## Kolekcje sekwencyjne -- SequencedCollection i SequencedSet
 
-- JEP 431 (Java 21) introduced three new interfaces:
-  SequencedCollection, SequencedSet, and SequencedMap.
-- **The problem**: Before Java 21, there was no uniform API to
-  access the first and last elements of ordered collections.
-  Each collection had its own way:
+- JEP 431 (Java 21) wprowadził trzy nowe interfejsy:
+  SequencedCollection, SequencedSet i SequencedMap.
+- **Problem**: Przed Java 21 nie było jednolitego API do
+  dostępu do pierwszego i ostatniego elementu uporządkowanych kolekcji.
+  Każda kolekcja miała swój sposób:
     - List: get(0) / get(size()-1)
     - Deque: getFirst() / getLast()
     - SortedSet: first() / last()
-    - LinkedHashSet: iterator().next() / no easy last access
-  This inconsistency made generic programming with ordered
-  collections unnecessarily difficult.
-- **SequencedCollection extends Collection** and adds:
+    - LinkedHashSet: iterator().next() / brak łatwego dostępu do ostatniego
+  Ta niespójność utrudniała generyczne programowanie z uporządkowanymi
+  kolekcjami.
+- **SequencedCollection rozszerza Collection** i dodaje:
     - addFirst(E) / addLast(E)
     - getFirst() / getLast()
     - removeFirst() / removeLast()
-    - reversed() -- returns a reversed-order view
-- **Retrofitted** to existing classes: ArrayList, LinkedList,
-  ArrayDeque, LinkedHashSet, TreeSet, and more. These classes
-  now implement SequencedCollection (or SequencedSet).
-- **reversed() returns a view**, not a copy. Modifications
-  through the reversed view are reflected in the original
-  collection and vice versa.
-- **SequencedSet extends SequencedCollection and Set** -- it
-  adds no new methods but narrows reversed() to return a
+    - reversed() -- zwraca widok w odwróconej kolejności
+- **Retrofitowane** do istniejących klas: ArrayList, LinkedList,
+  ArrayDeque, LinkedHashSet, TreeSet i inne. Klasy te
+  teraz implementują SequencedCollection (lub SequencedSet).
+- **reversed() zwraca widok**, nie kopię. Modyfikacje
+  przez odwrócony widok są odzwierciedlane w oryginalnej
+  kolekcji i odwrotnie.
+- **SequencedSet rozszerza SequencedCollection i Set** -- nie
+  dodaje nowych metod, ale zawęża reversed() do zwracania
   SequencedSet.
 */
 
 // ============================================================
-// Section 6: Sequenced Collections -- SequencedMap
+// Sekcja 6: Kolekcje sekwencyjne -- SequencedMap
 // ============================================================
 
 /*
-## Sequenced Collections -- SequencedMap
+## Kolekcje sekwencyjne -- SequencedMap
 
-- **SequencedMap extends Map** and adds encounter-order-aware
-  operations:
-    - firstEntry() / lastEntry() -- return Map.Entry or null
-    - putFirst(K, V) / putLast(K, V) -- insert or move entry
-      to first/last position
-    - pollFirstEntry() / pollLastEntry() -- remove and return
-    - sequencedKeySet() -- returns a SequencedSet of keys
-    - sequencedValues() -- returns a SequencedCollection of values
-    - sequencedEntrySet() -- returns a SequencedSet of entries
-    - reversed() -- returns a reversed SequencedMap view
-- **Retrofitted** to LinkedHashMap, TreeMap, and
+- **SequencedMap rozszerza Map** i dodaje operacje uwzględniające
+  kolejność napotkania:
+    - firstEntry() / lastEntry() -- zwracają Map.Entry lub null
+    - putFirst(K, V) / putLast(K, V) -- wstawiają lub przesuwają wpis
+      na pierwszą/ostatnią pozycję
+    - pollFirstEntry() / pollLastEntry() -- usuwają i zwracają
+    - sequencedKeySet() -- zwraca SequencedSet kluczy
+    - sequencedValues() -- zwraca SequencedCollection wartości
+    - sequencedEntrySet() -- zwraca SequencedSet wpisów
+    - reversed() -- zwraca odwrócony widok SequencedMap
+- **Retrofitowane** do LinkedHashMap, TreeMap i
   ConcurrentSkipListMap.
-- **LinkedHashMap** now has predictable first/last access.
-  Before Java 21, getting the first or last entry of a
-  LinkedHashMap required iterating (no direct API).
-- **putFirst / putLast** can reorder existing entries in a
-  LinkedHashMap. If the key already exists, putFirst moves
-  it to the first position (and updates the value).
-- **reversed()** on a SequencedMap returns a view where
-  iteration, firstEntry/lastEntry, and stream operations
-  all reflect the reversed order.
+- **LinkedHashMap** ma teraz przewidywalny dostęp do pierwszego/ostatniego elementu.
+  Przed Java 21 uzyskanie pierwszego lub ostatniego wpisu z
+  LinkedHashMap wymagało iteracji (brak bezpośredniego API).
+- **putFirst / putLast** mogą zmieniać kolejność istniejących wpisów w
+  LinkedHashMap. Jeśli klucz już istnieje, putFirst przesuwa
+  go na pierwszą pozycję (i aktualizuje wartość).
+- **reversed()** na SequencedMap zwraca widok, w którym
+  iteracja, firstEntry/lastEntry i operacje Stream
+  odzwierciedlają odwróconą kolejność.
 */
 
 // ============================================================
-// Section 7: Unnamed Variables and Patterns (JEP 456, Java 22)
+// Sekcja 7: Nienazwane zmienne i wzorce (JEP 456, Java 22)
 // ============================================================
 
 /*
-## Unnamed Variables and Patterns
+## Nienazwane zmienne i wzorce
 
-- JEP 456 finalized unnamed variables and patterns in Java 22
-  (previewed in Java 21 via JEP 443).
-- **The problem**: Before Java 22, unused variables needed dummy
-  names like _unused, ignored, or tmp. This obscured the
-  developer's intent and triggered IDE warnings.
-- **The underscore `_`** is now a reserved keyword that signals
-  "this value is intentionally unused." It was a legal identifier
-  in Java 8, deprecated in Java 9, and fully reserved in Java 22.
-- **7 supported contexts**:
-  1. Local variable declarations: var _ = someMethod();
-  2. Enhanced for loops: for (var _ : collection)
+- JEP 456 sfinalizował nienazwane zmienne i wzorce w Java 22
+  (podgląd w Java 21 przez JEP 443).
+- **Problem**: Przed Java 22 nieużywane zmienne wymagały fikcyjnych
+  nazw jak _unused, ignored lub tmp. Zaciemniało to
+  intencję programisty i wywoływało ostrzeżenia IDE.
+- **Podkreślnik `_`** jest teraz zarezerwowanym słowem kluczowym, które sygnalizuje
+  "ta wartość jest celowo nieużywana." Był legalnym identyfikatorem
+  w Java 8, przestarzałym w Java 9 i w pełni zarezerwowanym w Java 22.
+- **7 obsługiwanych kontekstów**:
+  1. Deklaracje zmiennych lokalnych: var _ = someMethod();
+  2. Rozszerzone pętle for: for (var _ : collection)
   3. Try-with-resources: try (var _ = acquireResource())
-  4. Catch blocks: catch (SomeException _)
-  5. Lambda parameters: (_, value) -> process(value)
-  6. Pattern variables: case Integer _ -> "int"
-  7. Record pattern components: case Point(var x, _) -> x
-- **Multiple `_` can coexist** in the same scope, unlike named
-  variables. This is especially useful in nested loops or
-  patterns where several values are unused.
-- **Pairs naturally with record patterns** from Sections 3-4:
-  when deconstructing records, you can ignore components you
-  don't need without inventing throwaway names.
+  4. Bloki catch: catch (SomeException _)
+  5. Parametry lambda: (_, value) -> process(value)
+  6. Zmienne wzorcowe: case Integer _ -> "int"
+  7. Składowe wzorców rekordów: case Point(var x, _) -> x
+- **Wiele `_` może współistnieć** w tym samym zakresie, w przeciwieństwie do
+  nazwanych zmiennych. Jest to szczególnie przydatne w zagnieżdżonych pętlach
+  lub wzorcach, gdzie kilka wartości jest nieużywanych.
+- **Naturalnie łączy się ze wzorcami rekordów** z Sekcji 3-4:
+  przy destrukturyzacji rekordów można ignorować składowe, których
+  nie potrzebujesz, bez wymyślania jednorazowych nazw.
 */
 
 public class OtherChanges {
 
-    // ---- Inner types for pattern matching demos ----
+    // ---- Typy wewnętrzne dla demo dopasowania wzorców ----
 
     sealed interface Shape permits Circle, Rectangle, Triangle {}
     record Circle(double radius) implements Shape {}
     record Rectangle(double width, double height) implements Shape {}
     record Triangle(double a, double b, double c) implements Shape {}
 
-    // Expression tree for nested record patterns
+    // Drzewo wyrażeń dla zagnieżdżonych wzorców rekordów
     sealed interface Expression permits Num, Add, Mul, Neg {}
     record Num(double value) implements Expression {}
     record Add(Expression left, Expression right) implements Expression {}
     record Mul(Expression left, Expression right) implements Expression {}
     record Neg(Expression expr) implements Expression {}
 
-    // For guarded patterns demo
+    // Dla demo wzorców warunkowanych
     record Person(String name, int age) {}
 
-    // For nested record pattern demos
+    // Dla demo zagnieżdżonych wzorców rekordów
     record Point(double x, double y) {}
     record ColoredPoint(Point point, String color) {}
     record Pair<A, B>(A first, B second) {}
 
     // ============================================================
-    // Section 1: Pattern Matching for switch -- Type Patterns and Null
+    // Sekcja 1: Dopasowanie wzorców w switch -- Wzorce typów i null
     // ============================================================
 
     static void patternMatchingTypePatterns() {
         System.out.println("=== Section 1: Pattern Matching for switch -- Type Patterns and Null ===");
 
-        // ---- Switch on Object with type patterns ----
+        // ---- Switch na Object ze wzorcami typów ----
         System.out.println("--- Switch on Object with type patterns ---");
         Object[] values = {"Hello", 42, 3.14, List.of(1, 2, 3), null, new int[]{10, 20}};
 
@@ -256,7 +256,7 @@ public class OtherChanges {
             System.out.println("  " + obj + " -> " + description);
         }
 
-        // ---- case null prevents NPE ----
+        // ---- case null zapobiega NPE ----
         System.out.println("\n--- case null prevents NPE ---");
         String input = null;
         String result = switch (input) {
@@ -266,7 +266,7 @@ public class OtherChanges {
         };
         System.out.println("  null input -> " + result);
 
-        // ---- Exhaustive switch on sealed type (no default needed) ----
+        // ---- Wyczerpujący switch na typie zapieczętowanym (brak potrzeby default) ----
         System.out.println("\n--- Exhaustive switch on sealed Shape (no default) ---");
         Shape[] shapes = {new Circle(5), new Rectangle(3, 4), new Triangle(3, 4, 5)};
 
@@ -275,20 +275,20 @@ public class OtherChanges {
                 case Circle c -> "Circle with radius " + c.radius();
                 case Rectangle r -> "Rectangle " + r.width() + "x" + r.height();
                 case Triangle t -> "Triangle with sides " + t.a() + ", " + t.b() + ", " + t.c();
-                // No default needed -- compiler knows all Shape subtypes
+                // Brak potrzeby default -- kompilator zna wszystkie podtypy Shape
             };
             System.out.println("  " + info);
         }
     }
 
     // ============================================================
-    // Section 2: Pattern Matching for switch -- Guarded Patterns and Dominance
+    // Sekcja 2: Dopasowanie wzorców w switch -- Wzorce warunkowane i dominacja
     // ============================================================
 
     static void guardedPatternsAndDominance() {
         System.out.println("\n=== Section 2: Pattern Matching for switch -- Guarded Patterns and Dominance ===");
 
-        // ---- Person age classification with when guards ----
+        // ---- Klasyfikacja wieku osoby z warunkami when ----
         System.out.println("--- Person age classification with when guards ---");
         var people = List.of(
                 new Person("Alice", 5),
@@ -307,7 +307,7 @@ public class OtherChanges {
             System.out.println("  " + category);
         }
 
-        // ---- Shape area filtering with when guards ----
+        // ---- Filtrowanie powierzchni kształtów z warunkami when ----
         System.out.println("\n--- Shape area filtering with when guards ---");
         Shape[] shapes = {
                 new Circle(1), new Circle(10),
@@ -326,20 +326,20 @@ public class OtherChanges {
             System.out.println("  " + result);
         }
 
-        // ---- Dominance rules (compile-time enforcement) ----
+        // ---- Reguły dominacji (wymuszane w czasie kompilacji) ----
         System.out.println("\n--- Dominance rules ---");
         System.out.println("  Dominance = specific patterns must come before general ones.");
         System.out.println("  Example: case String s MUST come before case Object o");
         System.out.println("  Example: case Circle c when c.radius() > 5 MUST come before case Circle c");
         System.out.println("  Violating dominance is a COMPILE ERROR (not a silent bug).");
 
-        // Uncommenting the following would cause a compile error:
+        // Odkomentowanie poniższego spowodowałoby błąd kompilacji:
         // String test = switch ((Object) "hello") {
-        //     case Object o -> "object";       // ERROR: dominates the String case below
-        //     case String s -> "string";        // unreachable
+        //     case Object o -> "object";       // BŁĄD: dominuje nad poniższym case String
+        //     case String s -> "string";        // nieosiągalny
         // };
 
-        // ---- Sealed type dispatch with guards ----
+        // ---- Rozdzielanie typów zapieczętowanych z warunkami ----
         System.out.println("\n--- Sealed type + guards for area calculation ---");
         Shape[] moreShapes = {new Circle(5), new Rectangle(3, 4), new Triangle(3, 4, 5)};
 
@@ -362,13 +362,13 @@ public class OtherChanges {
     }
 
     // ============================================================
-    // Section 3: Record Patterns -- Deconstruction
+    // Sekcja 3: Wzorce rekordów -- Destrukturyzacja
     // ============================================================
 
     static void recordPatternDeconstruction() {
         System.out.println("\n=== Section 3: Record Patterns -- Deconstruction ===");
 
-        // ---- Point quadrant classification via deconstruction ----
+        // ---- Klasyfikacja ćwiartki punktu przez destrukturyzację ----
         System.out.println("--- Point quadrant classification ---");
         var points = List.of(
                 new Point(3, 4), new Point(-2, 5),
@@ -387,7 +387,7 @@ public class OtherChanges {
             System.out.printf("  (%.0f, %.0f) -> %s%n", p.x(), p.y(), quadrant);
         }
 
-        // ---- Person age check via deconstruction ----
+        // ---- Sprawdzenie wieku osoby przez destrukturyzację ----
         System.out.println("\n--- Person deconstruction in switch ---");
         var person = new Person("Alice", 30);
         String info = switch (person) {
@@ -396,7 +396,7 @@ public class OtherChanges {
         };
         System.out.println("  " + info);
 
-        // ---- instanceof with record pattern ----
+        // ---- instanceof ze wzorcem rekordu ----
         System.out.println("\n--- instanceof with record pattern ---");
         Object obj = new Point(10, 20);
         if (obj instanceof Point(var x, var y)) {
@@ -404,14 +404,14 @@ public class OtherChanges {
             System.out.println("  Distance from origin: " + Math.sqrt(x * x + y * y));
         }
 
-        // ---- Comparison: deconstruction vs accessor style ----
+        // ---- Porównanie: destrukturyzacja vs styl akcesorów ----
         System.out.println("\n--- Deconstruction vs accessor style ---");
         var rect = new Rectangle(5, 10);
 
-        // Accessor style (traditional)
+        // Styl akcesorów (tradycyjny)
         double area1 = rect.width() * rect.height();
 
-        // Deconstruction style (Java 21)
+        // Styl destrukturyzacji (Java 21)
         double area2 = switch (rect) {
             case Rectangle(var w, var h) -> w * h;
         };
@@ -422,13 +422,13 @@ public class OtherChanges {
     }
 
     // ============================================================
-    // Section 4: Record Patterns -- Nested and Complex Patterns
+    // Sekcja 4: Wzorce rekordów -- Zagnieżdżone i złożone wzorce
     // ============================================================
 
     static void nestedRecordPatterns() {
         System.out.println("\n=== Section 4: Record Patterns -- Nested and Complex Patterns ===");
 
-        // ---- ColoredPoint nested deconstruction ----
+        // ---- Zagnieżdżona destrukturyzacja ColoredPoint ----
         System.out.println("--- ColoredPoint nested deconstruction ---");
         var coloredPoints = List.of(
                 new ColoredPoint(new Point(1, 2), "red"),
@@ -446,28 +446,28 @@ public class OtherChanges {
             System.out.println("  " + desc);
         }
 
-        // ---- Expression tree evaluation via switch with record patterns ----
+        // ---- Ewaluacja drzewa wyrażeń za pomocą switch ze wzorcami rekordów ----
         System.out.println("\n--- Expression tree evaluation ---");
 
-        // Build: (2 + 3) * 4
+        // Buduj: (2 + 3) * 4
         Expression expr1 = new Mul(new Add(new Num(2), new Num(3)), new Num(4));
         System.out.println("  (2 + 3) * 4 = " + evaluate(expr1));
 
-        // Build: -(5 + 3)
+        // Buduj: -(5 + 3)
         Expression expr2 = new Neg(new Add(new Num(5), new Num(3)));
         System.out.println("  -(5 + 3) = " + evaluate(expr2));
 
-        // Build: (10 * 2) + (-(3))
+        // Buduj: (10 * 2) + (-(3))
         Expression expr3 = new Add(new Mul(new Num(10), new Num(2)), new Neg(new Num(3)));
         System.out.println("  (10 * 2) + (-(3)) = " + evaluate(expr3));
 
-        // ---- Pretty-print expressions ----
+        // ---- Ładne formatowanie wyrażeń ----
         System.out.println("\n--- Pretty-print expressions ---");
         System.out.println("  " + prettyPrint(expr1));
         System.out.println("  " + prettyPrint(expr2));
         System.out.println("  " + prettyPrint(expr3));
 
-        // ---- Pair deconstruction ----
+        // ---- Destrukturyzacja Pair ----
         System.out.println("\n--- Pair deconstruction ---");
         var pairs = List.of(
                 new Pair<>(new Point(1, 2), new Point(3, 4)),
@@ -503,7 +503,7 @@ public class OtherChanges {
     }
 
     // ============================================================
-    // Section 5: Sequenced Collections -- SequencedCollection and SequencedSet
+    // Sekcja 5: Kolekcje sekwencyjne -- SequencedCollection i SequencedSet
     // ============================================================
 
     static void sequencedCollections() {
@@ -524,7 +524,7 @@ public class OtherChanges {
         System.out.println("  reversed():  " + reversed);
         System.out.println("  reversed() type: " + reversed.getClass().getSimpleName());
 
-        // ---- LinkedHashSet: insertion-order sequenced access ----
+        // ---- LinkedHashSet: dostęp sekwencyjny z zachowaniem kolejności wstawiania ----
         System.out.println("\n--- LinkedHashSet: sequenced access ---");
         var linkedSet = new LinkedHashSet<>(List.of("apple", "banana", "cherry", "date"));
         System.out.println("  Original:   " + linkedSet);
@@ -534,7 +534,7 @@ public class OtherChanges {
         var reversedSet = linkedSet.reversed();
         System.out.println("  reversed(): " + reversedSet);
 
-        // ---- TreeSet: sorted + sequenced ----
+        // ---- TreeSet: posortowany + sekwencyjny ----
         System.out.println("\n--- TreeSet: sorted + sequenced ---");
         var treeSet = new TreeSet<>(List.of(50, 10, 30, 20, 40));
         System.out.println("  TreeSet:    " + treeSet);
@@ -542,7 +542,7 @@ public class OtherChanges {
         System.out.println("  getLast():  " + treeSet.getLast());
         System.out.println("  reversed(): " + treeSet.reversed());
 
-        // ---- reversed() is a view, not a copy ----
+        // ---- reversed() to widok, nie kopia ----
         System.out.println("\n--- reversed() is a view (mutations reflect) ---");
         var original = new ArrayList<>(List.of(1, 2, 3, 4, 5));
         var view = original.reversed();
@@ -554,7 +554,7 @@ public class OtherChanges {
         System.out.println("    Original: " + original);
         System.out.println("    View:     " + view);
 
-        view.addFirst(7);  // addFirst on reversed = addLast on original
+        view.addFirst(7);  // addFirst na odwróconym = addLast na oryginale
         System.out.println("  After view.addFirst(7):");
         System.out.println("    Original: " + original);
         System.out.println("    View:     " + view);
@@ -569,7 +569,7 @@ public class OtherChanges {
     }
 
     // ============================================================
-    // Section 6: Sequenced Collections -- SequencedMap
+    // Sekcja 6: Kolekcje sekwencyjne -- SequencedMap
     // ============================================================
 
     static void sequencedMaps() {
@@ -587,7 +587,7 @@ public class OtherChanges {
         System.out.println("  firstEntry(): " + map.firstEntry());
         System.out.println("  lastEntry():  " + map.lastEntry());
 
-        // ---- putFirst reorders existing entries ----
+        // ---- putFirst zmienia kolejność istniejących wpisów ----
         System.out.println("\n--- putFirst reorders entries ---");
         System.out.println("  Before putFirst(\"gamma\", 30): " + map);
         map.putFirst("gamma", 30);
@@ -597,7 +597,7 @@ public class OtherChanges {
         map.putLast("alpha", 100);
         System.out.println("  After putLast(\"alpha\", 100):  " + map);
 
-        // ---- TreeMap: sorted + sequenced access ----
+        // ---- TreeMap: posortowany + dostęp sekwencyjny ----
         System.out.println("\n--- TreeMap: sorted sequenced access ---");
         var treeMap = new TreeMap<String, Integer>();
         treeMap.put("cherry", 3);
@@ -617,7 +617,7 @@ public class OtherChanges {
         SequencedSet<String> reversedKeys = treeMap.sequencedKeySet().reversed();
         System.out.println("  reversed keys:     " + reversedKeys);
 
-        // ---- Reversed map iteration ----
+        // ---- Iteracja po odwróconej mapie ----
         System.out.println("\n--- Reversed map iteration ---");
         var reversedMap = treeMap.reversed();
         System.out.println("  Reversed TreeMap:");
@@ -641,13 +641,13 @@ public class OtherChanges {
     }
 
     // ============================================================
-    // Section 7: Unnamed Variables and Patterns (JEP 456, Java 22)
+    // Sekcja 7: Nienazwane zmienne i wzorce (JEP 456, Java 22)
     // ============================================================
 
     static void unnamedVariables() {
         System.out.println("\n=== Section 7: Unnamed Variables and Patterns (JEP 456, Java 22) ===");
 
-        // ---- Enhanced for loop: count without using loop variable ----
+        // ---- Rozszerzona pętla for: zliczanie bez użycia zmiennej pętli ----
         System.out.println("--- Enhanced for: count without using loop variable ---");
         var items = List.of("apple", "banana", "cherry", "date", "elderberry");
         int count = 0;
@@ -656,7 +656,7 @@ public class OtherChanges {
         }
         System.out.println("  Counted " + count + " items (loop variable unnamed with _)");
 
-        // ---- Catch block with unnamed exception ----
+        // ---- Blok catch z nienazwaną zmienną wyjątku ----
         System.out.println("\n--- Catch block: unnamed exception variable ---");
         String[] inputs = {"42", "not_a_number", "100", "oops"};
         for (String input : inputs) {
@@ -668,7 +668,7 @@ public class OtherChanges {
             }
         }
 
-        // ---- Lambda parameters with _ ----
+        // ---- Parametry lambda z _ ----
         System.out.println("\n--- Lambda: unnamed parameters ---");
         var prices = new LinkedHashMap<String, Double>();
         prices.put("Coffee", 4.50);
@@ -677,7 +677,7 @@ public class OtherChanges {
         System.out.println("  Values only (key ignored via _):");
         prices.forEach((_, value) -> System.out.println("    $" + value));
 
-        // ---- Pattern matching in switch with unnamed pattern variables ----
+        // ---- Dopasowanie wzorców w switch z nienazwanymi zmiennymi wzorcowymi ----
         System.out.println("\n--- Switch: unnamed pattern variables ---");
         Object[] values = {42, "hello", 3.14, List.of(1, 2), true};
         for (Object obj : values) {
@@ -691,7 +691,7 @@ public class OtherChanges {
             System.out.println("  " + obj + " -> " + type);
         }
 
-        // ---- Record patterns with unnamed components ----
+        // ---- Wzorce rekordów z nienazwanymi składowymi ----
         System.out.println("\n--- Record patterns: unnamed components ---");
         var coloredPoints = List.of(
                 new ColoredPoint(new Point(1, 2), "red"),
@@ -711,7 +711,7 @@ public class OtherChanges {
             }
         }
 
-        // ---- Multiple _ in same scope ----
+        // ---- Wiele _ w tym samym zakresie ----
         System.out.println("\n--- Multiple _ in same scope ---");
         var pairs = List.of(
                 new Pair<>("Alice", 30),
@@ -720,7 +720,7 @@ public class OtherChanges {
         );
         int pairCount = 0;
         for (var _ : pairs) {
-            for (var _ : items) {  // two _ loop variables in nested scopes
+            for (var _ : items) {  // dwie nienazwane zmienne pętli w zagnieżdżonych zakresach
                 pairCount++;
             }
         }
@@ -728,7 +728,7 @@ public class OtherChanges {
     }
 
     // ============================================================
-    // Main -- run all sections
+    // Main -- uruchomienie wszystkich sekcji
     // ============================================================
 
     public static void main(String[] args) {

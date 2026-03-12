@@ -5,215 +5,220 @@ import java.util.function.*;
 import java.util.stream.*;
 
 // ============================================================
-// Section 1: The instanceof Problem
+// Sekcja 1: Problem z instanceof
 // ============================================================
 
 /*
-## The instanceof Problem
+## Problem z instanceof
 
-- In traditional Java, checking the type of an object and then
-  using it requires **three separate steps**:
-    1. `if (obj instanceof String)` — check the type
-    2. `String s = (String) obj;` — cast to the type
-    3. Use `s` — finally work with the value
-  This is 3 lines for what is conceptually a single operation.
-- **The cast is redundant**: If the `instanceof` check passed,
-  we already know the type — yet Java forced us to write an
-  explicit cast that can never fail. This is pure boilerplate.
-- **ClassCastException risk**: If a developer mistakenly casts
-  to the wrong type (or casts without checking instanceof first),
-  a `ClassCastException` is thrown at runtime. The pattern of
-  check-then-cast should be a single atomic operation.
-- **JEP 394** (finalized in Java 16):
-    - Preview in Java 14 (JEP 305)
-    - Second preview in Java 15 (JEP 375)
-    - Finalized in Java 16 (JEP 394)
-    - Taught here with Java 17 LTS
-- **Pattern variable binding**: The new syntax combines the check
-  and cast into one expression:
-      if (obj instanceof String s) { // use s directly }
-  The variable s is called a **pattern variable**. It is
-  automatically bound to the cast value and is only in scope
-  where the compiler can prove the check succeeded.
-- This feature works with **any reference type** -- classes,
-  interfaces, abstract classes -- not just records or sealed types.
+- W tradycyjnej Javie sprawdzenie typu obiektu, a następnie
+  jego użycie wymaga **trzech oddzielnych kroków**:
+    1. `if (obj instanceof String)` — sprawdź typ
+    2. `String s = (String) obj;` — rzutuj na typ
+    3. Użyj `s` — w końcu pracuj z wartością
+  To 3 linie na coś, co koncepcyjnie jest pojedynczą operacją.
+- **Rzutowanie jest nadmiarowe**: Jeśli sprawdzenie `instanceof`
+  przeszło, już znamy typ — a mimo to Java zmuszała nas do
+  napisania jawnego rzutowania, które nigdy nie może się nie powieść.
+  To czysta szablonowość.
+- **Ryzyko ClassCastException**: Jeśli programista omyłkowo rzutuje
+  na niewłaściwy typ (lub rzutuje bez wcześniejszego sprawdzenia
+  instanceof), w czasie wykonania zostaje rzucony
+  `ClassCastException`. Wzorzec sprawdź-potem-rzutuj powinien być
+  pojedynczą atomową operacją.
+- **JEP 394** (sfinalizowano w Javie 16):
+    - Podgląd w Javie 14 (JEP 305)
+    - Drugi podgląd w Javie 15 (JEP 375)
+    - Sfinalizowano w Javie 16 (JEP 394)
+    - Omawiane tutaj z Java 17 LTS
+- **Wiązanie zmiennej wzorca**: Nowa składnia łączy sprawdzenie
+  i rzutowanie w jedno wyrażenie:
+      if (obj instanceof String s) { // użyj s bezpośrednio }
+  Zmienna s nazywana jest **zmienną wzorca**. Jest
+  automatycznie wiązana z rzutowaną wartością i jest w zasięgu
+  tylko tam, gdzie kompilator może udowodnić, że sprawdzenie
+  się powiodło.
+- Ta funkcja działa z **dowolnym typem referencyjnym** — klasami,
+  interfejsami, klasami abstrakcyjnymi — nie tylko record lub sealed typami.
 */
 
 // ============================================================
-// Section 2: Pattern Variables and Scope
+// Sekcja 2: Zmienne wzorca i zasięg
 // ============================================================
 
 /*
-## Pattern Variables and Scope
+## Zmienne wzorca i zasięg
 
-- Pattern variables use **flow scoping** (also called
-  **definite-assignment analysis**), NOT traditional block
-  scoping. The variable is in scope wherever the compiler can
-  prove the instanceof check succeeded.
-- **Scope in if-body**: The pattern variable is in scope inside
-  the if-body because the check is guaranteed to have passed:
+- Zmienne wzorca używają **zasięgu przepływowego** (zwanego też
+  **analizą określonego przypisania**), a NIE tradycyjnego zasięgu
+  blokowego. Zmienna jest w zasięgu wszędzie, gdzie kompilator
+  może udowodnić, że sprawdzenie instanceof się powiodło.
+- **Zasięg w ciele if**: Zmienna wzorca jest w zasięgu wewnątrz
+  ciała if, ponieważ sprawdzenie gwarantowanie się powiodło:
       if (obj instanceof String s) {
-          // s is in scope here
+          // s jest w zasięgu tutaj
       }
-      // s is NOT in scope here
-- **Negated condition + early return**: When you negate the
-  condition and return early, the variable is in scope AFTER
-  the if-block (in the rest of the method):
+      // s NIE jest w zasięgu tutaj
+- **Zanegowany warunek + wczesny powrót**: Gdy negujesz
+  warunek i wracasz wcześniej, zmienna jest w zasięgu PO
+  bloku if (w pozostałej części metody):
       if (!(obj instanceof String s)) return;
-      // s is in scope here — the check must have passed
-  This pattern is common for guard clauses / preconditions.
-- **Scope in else with negation**: If the condition is negated
-  in a different way (via `else`), the variable is available in
-  the else branch only if the logic guarantees it:
+      // s jest w zasięgu tutaj — sprawdzenie musiało się powieść
+  Ten wzorzec jest powszechny dla klauzul strażniczych / warunków wstępnych.
+- **Zasięg w else z negacją**: Jeśli warunek jest zanegowany
+  w inny sposób (przez `else`), zmienna jest dostępna w
+  gałęzi else tylko jeśli logika to gwarantuje:
       if (obj instanceof String s) {
-          // s in scope
+          // s w zasięgu
       } else {
-          // s NOT in scope — obj might not be a String
+          // s NIE w zasięgu — obj może nie być String
       }
-- **Scope in while loops**: Pattern variables also work in
-  while-loop conditions and the loop body.
-- **Shadowing**: A pattern variable can shadow a field or local
-  variable of the same name, just like other local variables.
+- **Zasięg w pętlach while**: Zmienne wzorca działają również
+  w warunkach pętli while i w ciele pętli.
+- **Przesłanianie**: Zmienna wzorca może przesłonić pole lub zmienną
+  lokalną o tej samej nazwie, tak jak inne zmienne lokalne.
 */
 
 // ============================================================
-// Section 3: Complex Conditions
+// Sekcja 3: Złożone warunki
 // ============================================================
 
 /*
-## Complex Conditions
+## Złożone warunki
 
-- **Combining with `&&`**: You can combine instanceof patterns
-  with additional conditions using `&&` (logical AND):
+- **Łączenie z `&&`**: Możesz łączyć wzorce instanceof
+  z dodatkowymi warunkami używając `&&` (logiczne I):
       if (obj instanceof String s && s.length() > 5)
-  This works because `&&` is short-circuit: `s` is only evaluated
-  if the instanceof check passed, so the variable is in scope.
-- **Cannot use with `||`**: Using `||` with a pattern variable
-  is a **compile error**:
-      if (obj instanceof String s || s.isEmpty()) // ERROR!
-  With `||`, the right side executes when the left is false,
-  meaning `s` might not be bound. The compiler rejects this.
-- **Multiple pattern variables**: You can chain multiple
-  instanceof checks with `&&`:
+  To działa, ponieważ `&&` jest skrócone: `s` jest ewaluowane
+  tylko jeśli sprawdzenie instanceof się powiodło, więc zmienna
+  jest w zasięgu.
+- **Nie można użyć z `||`**: Użycie `||` ze zmienną wzorca
+  jest **błędem kompilacji**:
+      if (obj instanceof String s || s.isEmpty()) // BŁĄD!
+  Przy `||` prawa strona wykonuje się gdy lewa jest fałszywa,
+  co oznacza, że `s` może nie być związane. Kompilator to odrzuca.
+- **Wiele zmiennych wzorca**: Możesz łączyć wiele
+  sprawdzeń instanceof z `&&`:
       if (a instanceof String s && b instanceof Integer i) {
-          // both s and i are in scope
+          // zarówno s jak i i są w zasięgu
       }
-- **Guard-like conditions**: Combine instanceof with property
-  checks for powerful filtering:
+- **Warunki strażnicze**: Połącz instanceof ze sprawdzaniem
+  właściwości dla potężnego filtrowania:
       if (animal instanceof Dog d && d.breed().equals("Labrador"))
-  This replaces two nested if-statements with a single line.
-- **Nested conditions**: Pattern variables from an outer if are
-  in scope in nested if-statements:
+  To zastępuje dwie zagnieżdżone instrukcje if jedną linią.
+- **Zagnieżdżone warunki**: Zmienne wzorca z zewnętrznego if
+  są w zasięgu w zagnieżdżonych instrukcjach if:
       if (obj instanceof List<?> list) {
           if (list.size() > 0 && list.get(0) instanceof String s) {
-              // both list and s in scope
+              // zarówno list jak i s w zasięgu
           }
       }
 */
 
 // ============================================================
-// Section 4: Inheritance Hierarchies
+// Sekcja 4: Hierarchie dziedziczenia
 // ============================================================
 
 /*
-## Inheritance Hierarchies
+## Hierarchie dziedziczenia
 
-- When using instanceof with inheritance, **order matters**:
-  check the most specific type first, then more general types.
-  If you check `Rect` before `Square`, a Square will match
-  as a Rect and never reach the Square case.
-      if (shape instanceof Square sq)       // check specific first
-      else if (shape instanceof Rect r)      // then general
+- Przy używaniu instanceof z dziedziczeniem **kolejność ma znaczenie**:
+  sprawdzaj najpierw najbardziej konkretny typ, potem bardziej ogólne.
+  Jeśli sprawdzisz `Rect` przed `Square`, Square dopasuje się
+  jako Rect i nigdy nie dotrze do przypadku Square.
+      if (shape instanceof Square sq)       // sprawdź konkretny najpierw
+      else if (shape instanceof Rect r)      // potem ogólny
       else if (shape instanceof Circle c)
-- **Polymorphism vs pattern matching**: These are complementary
-  tools, not competitors:
-    - **Polymorphism** (virtual methods): Best when each type
-      knows how to perform an operation on itself. Add the method
-      to the class hierarchy. Operations on own data.
-    - **Pattern matching**: Best for **external operations** that
-      combine data from the object with external context, or when
-      you cannot modify the class hierarchy.
-- **When to use each**:
-    - `area()` → polymorphism (each shape computes its own area)
-    - `describe(Shape)` → pattern matching (external description
-      logic that doesn't belong inside the shape classes)
-    - `render(Shape, Canvas)` → pattern matching (involves
-      external Canvas that shapes shouldn't depend on)
-- **Mixed approach**: Use polymorphism for core behavior and
-  pattern matching for utility/display/external operations.
+- **Polimorfizm vs dopasowywanie wzorców**: To są narzędzia
+  komplementarne, nie konkurencyjne:
+    - **Polimorfizm** (metody wirtualne): Najlepszy gdy każdy typ
+      wie jak wykonać operację na sobie. Dodaj metodę
+      do hierarchii klas. Operacje na własnych danych.
+    - **Dopasowywanie wzorców**: Najlepsze dla **operacji zewnętrznych**
+      łączących dane z obiektu z zewnętrznym kontekstem, lub gdy
+      nie można modyfikować hierarchii klas.
+- **Kiedy używać każdego**:
+    - `area()` → polimorfizm (każdy kształt oblicza swoje własne pole)
+    - `describe(Shape)` → dopasowywanie wzorców (zewnętrzna logika
+      opisu, która nie należy do klas kształtów)
+    - `render(Shape, Canvas)` → dopasowywanie wzorców (wymaga
+      zewnętrznego Canvas, od którego kształty nie powinny zależeć)
+- **Podejście mieszane**: Użyj polimorfizmu dla podstawowego zachowania
+  i dopasowywania wzorców dla operacji narzędziowych/wyświetlania/zewnętrznych.
 */
 
 // ============================================================
-// Section 5: Practical Patterns
+// Sekcja 5: Wzorce praktyczne
 // ============================================================
 
 /*
-## Practical Patterns
+## Wzorce praktyczne
 
-- **equals() implementation**: The most common real-world use
-  of pattern matching for instanceof is in `equals()` methods:
+- **Implementacja equals()**: Najpowszechniejsze rzeczywiste
+  zastosowanie dopasowywania wzorców dla instanceof to metody `equals()`:
       @Override
       public boolean equals(Object o) {
           return o instanceof Sensor s
               && id == s.id
               && Objects.equals(type, s.type);
       }
-  This replaces 5+ lines of boilerplate with a single expression.
-- **Stream filtering by type**: Pattern matching combines
-  naturally with streams to filter and map by type:
+  To zastępuje 5+ linii szablonowego kodu jednym wyrażeniem.
+- **Filtrowanie Stream po typie**: Dopasowywanie wzorców łączy się
+  naturalnie ze Stream do filtrowania i mapowania po typie:
       list.stream()
           .filter(obj -> obj instanceof Dog)
-          .map(obj -> (Dog) obj)  // still needed in map
-  Or using `Stream.mapMulti` for a cleaner approach.
-- **Heterogeneous containers**: Processing a `List<Object>` with
-  mixed types becomes readable with pattern matching:
+          .map(obj -> (Dog) obj)  // wciąż potrzebne w map
+  Lub używając `Stream.mapMulti` dla czystszego podejścia.
+- **Kontenery heterogeniczne**: Przetwarzanie `List<Object>` z
+  mieszanymi typami staje się czytelne z dopasowywaniem wzorców:
       for (Object item : items) {
           if (item instanceof String s) { ... }
           else if (item instanceof Integer i) { ... }
       }
-- **Visitor pattern replacement**: Pattern matching can replace
-  the visitor pattern for simple type dispatch — no need for
-  accept/visit boilerplate.
-- **Null safety**: `null instanceof X` always returns `false`
-  for any type X. This means you don't need a separate null
-  check before instanceof — it's built in.
+- **Zamiennik wzorca Visitor**: Dopasowywanie wzorców może zastąpić
+  wzorzec visitor dla prostego dispatchu typów — nie ma potrzeby
+  stosowania szablonu accept/visit.
+- **Bezpieczeństwo null**: `null instanceof X` zawsze zwraca `false`
+  dla dowolnego typu X. To oznacza, że nie potrzebujesz osobnego
+  sprawdzenia null przed instanceof — jest wbudowane.
 */
 
 // ============================================================
-// Section 6: Pattern Matching Evolution
+// Sekcja 6: Ewolucja dopasowywania wzorców
 // ============================================================
 
 /*
-## Pattern Matching Evolution
+## Ewolucja dopasowywania wzorców
 
-- **Java 16**: Pattern matching for instanceof (JEP 394)
+- **Java 16**: Dopasowywanie wzorców dla instanceof (JEP 394)
     - `if (obj instanceof String s) { ... }`
-    - The foundation — eliminates cast-after-check boilerplate
-- **Java 17**: Sealed classes (JEP 409) — sets the stage
-    - Sealed types enable exhaustive type checking later
-    - No direct pattern matching changes, but essential groundwork
-- **Java 21**: Pattern matching for switch (JEP 441) +
-  Record patterns (JEP 440)
+    - Fundament — eliminuje szablonowość rzutuj-po-sprawdzeniu
+- **Java 17**: Klasy sealed (JEP 409) — przygotowanie gruntu
+    - Typy sealed umożliwiają wyczerpujące sprawdzanie typów później
+    - Brak bezpośrednich zmian w dopasowywaniu wzorców, ale
+      niezbędne przygotowanie
+- **Java 21**: Dopasowywanie wzorców dla switch (JEP 441) +
+  Wzorce record (JEP 440)
     - `switch (obj) { case String s -> ...; }`
-    - `case Point(var x, var y) -> ...` (record deconstruction)
-    - `when` guards: `case String s when s.length() > 5 -> ...`
-    - Exhaustiveness checking with sealed types
-- **Java 22+**: Unnamed patterns `_` (JEP 456)
-    - `case Point(var x, _) -> ...` (ignore y component)
-    - Useful when you don't need all components
-- **Future directions** (in development):
-    - Primitive type patterns (`case int i -> ...`)
-    - Array patterns
-    - More deconstruction patterns beyond records
-- The overall trajectory: Java is becoming a language where
-  **data-oriented programming** is a first-class paradigm
-  alongside object-oriented programming. Pattern matching is
-  the key enabler of this shift.
+    - `case Point(var x, var y) -> ...` (dekonstrukcja record)
+    - Strażniki `when`: `case String s when s.length() > 5 -> ...`
+    - Sprawdzanie wyczerpywalności z typami sealed
+- **Java 22+**: Nienazwane wzorce `_` (JEP 456)
+    - `case Point(var x, _) -> ...` (ignoruj komponent y)
+    - Przydatne gdy nie potrzebujesz wszystkich komponentów
+- **Przyszłe kierunki** (w trakcie rozwoju):
+    - Wzorce typów prymitywnych (`case int i -> ...`)
+    - Wzorce tablic
+    - Więcej wzorców dekonstrukcji poza record
+- Ogólny kierunek: Java staje się językiem, w którym
+  **programowanie zorientowane na dane** jest paradygmatem
+  pierwszej klasy obok programowania obiektowego. Dopasowywanie
+  wzorców jest kluczowym czynnikiem tej zmiany.
 */
 
 public class PatternMatchingForInstanceof {
 
-    // ---- Section 1: Animal hierarchy ----
+    // ---- Sekcja 1: Hierarchia Animal ----
 
     static abstract class Animal {
         abstract String name();
@@ -253,7 +258,7 @@ public class PatternMatchingForInstanceof {
         boolean canFly() { return canFly; }
     }
 
-    // ---- Section 4: Shape hierarchy ----
+    // ---- Sekcja 4: Hierarchia Shape ----
 
     static abstract class Shape {
         abstract double area();
@@ -283,7 +288,7 @@ public class PatternMatchingForInstanceof {
         @Override public String toString() { return "Square[side=" + side() + "]"; }
     }
 
-    // ---- Section 5: Sensor with equals() ----
+    // ---- Sekcja 5: Sensor z equals() ----
 
     static class Sensor {
         private final int id;
@@ -311,7 +316,7 @@ public class PatternMatchingForInstanceof {
     }
 
     // ============================================================
-    // Section 1: The instanceof Problem
+    // Sekcja 1: Problem z instanceof
     // ============================================================
 
     static void theInstanceofProblem() {
@@ -326,22 +331,22 @@ public class PatternMatchingForInstanceof {
                 new Bird("Kiwi", false)
         );
 
-        // OLD WAY: instanceof + explicit cast
+        // STARY SPOSÓB: instanceof + jawne rzutowanie
         System.out.println("--- Old way: instanceof + explicit cast ---");
         for (Animal animal : animals) {
             if (animal instanceof Dog) {
-                Dog d = (Dog) animal;  // redundant cast
+                Dog d = (Dog) animal;  // nadmiarowe rzutowanie
                 System.out.println("  Dog: " + d.name() + " (" + d.breed() + ") - " + d.fetch());
             } else if (animal instanceof Cat) {
-                Cat c = (Cat) animal;  // redundant cast
+                Cat c = (Cat) animal;  // nadmiarowe rzutowanie
                 System.out.println("  Cat: " + c.name() + " (indoor: " + c.isIndoor() + ") - " + c.purr());
             } else if (animal instanceof Bird) {
-                Bird b = (Bird) animal;  // redundant cast
+                Bird b = (Bird) animal;  // nadmiarowe rzutowanie
                 System.out.println("  Bird: " + b.name() + " (can fly: " + b.canFly() + ")");
             }
         }
 
-        // NEW WAY: pattern matching for instanceof
+        // NOWY SPOSÓB: dopasowywanie wzorców dla instanceof
         System.out.println("\n--- New way: pattern matching ---");
         for (Animal animal : animals) {
             if (animal instanceof Dog d) {
@@ -353,18 +358,18 @@ public class PatternMatchingForInstanceof {
             }
         }
 
-        // Side-by-side comparison — lines of code
+        // Porównanie obok siebie — liczba linii kodu
         System.out.println("\n--- Side-by-side: old vs new ---");
         Animal animal = new Dog("Max", "Poodle");
 
-        // Old: 3 lines
+        // Stary: 3 linie
         System.out.println("  Old (3 lines):");
         if (animal instanceof Dog) {
             Dog d = (Dog) animal;
             System.out.println("    " + d.name() + " is a " + d.breed());
         }
 
-        // New: 1 line (conceptually)
+        // Nowy: 1 linia (koncepcyjnie)
         System.out.println("  New (1 line check+bind):");
         if (animal instanceof Dog d) {
             System.out.println("    " + d.name() + " is a " + d.breed());
@@ -372,53 +377,53 @@ public class PatternMatchingForInstanceof {
     }
 
     // ============================================================
-    // Section 2: Pattern Variables and Scope
+    // Sekcja 2: Zmienne wzorca i zasięg
     // ============================================================
 
     static String describeWithEarlyReturn(Object obj) {
         if (!(obj instanceof String s)) {
             return "Not a string";
         }
-        // s is in scope here because the instanceof must have succeeded
-        // (if it failed, we would have returned above)
+        // s jest w zasięgu tutaj, ponieważ instanceof musiało się powieść
+        // (jeśli się nie powiodło, wrócilibyśmy powyżej)
         return "String of length " + s.length() + ": \"" + s + "\"";
     }
 
     static void patternVariablesAndScope() {
         System.out.println("\n=== Section 2: Pattern Variables and Scope ===");
 
-        // Basic scope in if-body
+        // Podstawowy zasięg w ciele if
         System.out.println("--- Basic scope in if-body ---");
         Object obj = "Hello, Pattern Matching!";
         if (obj instanceof String s) {
             System.out.println("  s is in scope: \"" + s + "\" (length: " + s.length() + ")");
         }
-        // s is NOT in scope here — cannot use it outside the if-body
+        // s NIE jest w zasięgu tutaj — nie można go użyć poza ciałem if
 
-        // Early return pattern with negation
+        // Wzorzec wczesnego powrotu z negacją
         System.out.println("\n--- Early return pattern with negation ---");
         System.out.println("  " + describeWithEarlyReturn("Hello World"));
         System.out.println("  " + describeWithEarlyReturn(42));
         System.out.println("  " + describeWithEarlyReturn(null));
 
-        // Scope in else with negated condition
+        // Zasięg w else ze zanegowanym warunkiem
         System.out.println("\n--- Scope in if vs else ---");
         Object value = 42;
         if (value instanceof String s) {
             System.out.println("  It's a string: " + s);
         } else {
-            // s is NOT in scope here — value is not a String
+            // s NIE jest w zasięgu tutaj — value nie jest String
             System.out.println("  Not a string, it's a: " + value.getClass().getSimpleName());
         }
 
-        // Compiler error example (commented out)
+        // Przykład błędu kompilacji (zakomentowany)
         // Object x = 42;
         // if (x instanceof String s) {
         //     System.out.println(s);
         // }
-        // System.out.println(s); // ERROR: s is not in scope here
+        // System.out.println(s); // BŁĄD: s nie jest w zasięgu tutaj
 
-        // Pattern variable in while loop
+        // Zmienna wzorca w pętli
         System.out.println("\n--- Pattern variable in loop ---");
         List<Object> items = List.of("first", 2, "third", 4, "fifth");
         System.out.println("  Strings found in list:");
@@ -428,25 +433,25 @@ public class PatternMatchingForInstanceof {
             }
         }
 
-        // Negation scope in a processing loop
+        // Zasięg z negacją: pominięcie nie-ciągów
         System.out.println("\n--- Negation scope: skip non-strings ---");
         for (Object item : items) {
             if (!(item instanceof String s)) {
-                continue;  // skip non-strings
+                continue;  // pomiń nie-ciągi
             }
-            // s is in scope here due to flow scoping
+            // s jest w zasięgu tutaj dzięki zasięgowi przepływowemu
             System.out.println("    Processing string: \"" + s.toUpperCase() + "\"");
         }
     }
 
     // ============================================================
-    // Section 3: Complex Conditions
+    // Sekcja 3: Złożone warunki
     // ============================================================
 
     static void complexConditions() {
         System.out.println("\n=== Section 3: Complex Conditions ===");
 
-        // Combining instanceof with && (short-circuit)
+        // Łączenie instanceof z && (skrócone wartościowanie)
         System.out.println("--- instanceof with && (short-circuit) ---");
         List<Object> values = List.of("Hello World", "Hi", "", 42, "Pattern Matching is great", 3.14);
         for (Object val : values) {
@@ -455,7 +460,7 @@ public class PatternMatchingForInstanceof {
             }
         }
 
-        // Multiple instanceof checks with &&
+        // Wiele sprawdzeń instanceof z &&
         System.out.println("\n--- Multiple instanceof checks with && ---");
         Object a = "Hello";
         Object b = 42;
@@ -464,13 +469,13 @@ public class PatternMatchingForInstanceof {
             System.out.println("  Combined: \"" + s + "\" repeated " + i + " times would be " + (s.length() * i) + " chars");
         }
 
-        // Cannot use || with pattern variables (compile error)
+        // Nie można użyć || ze zmiennymi wzorca (błąd kompilacji)
         System.out.println("\n--- Why || doesn't work with pattern variables ---");
         System.out.println("  // if (obj instanceof String s || s.isEmpty()) → COMPILE ERROR");
         System.out.println("  // With ||, the right side runs when left is false,");
         System.out.println("  // so 's' might not be bound → compiler rejects it");
 
-        // Guard-like conditions with Animal hierarchy
+        // Warunki strażnicze z hierarchią Animal
         System.out.println("\n--- Guard-like conditions ---");
         List<Animal> animals = List.of(
                 new Dog("Rex", "German Shepherd"),
@@ -494,7 +499,7 @@ public class PatternMatchingForInstanceof {
             }
         }
 
-        // Nested instanceof checks
+        // Zagnieżdżone sprawdzenia instanceof
         System.out.println("\n--- Nested instanceof checks ---");
         List<Object> containers = List.of(
                 List.of("hello", "world"),
@@ -514,11 +519,11 @@ public class PatternMatchingForInstanceof {
     }
 
     // ============================================================
-    // Section 4: Inheritance Hierarchies
+    // Sekcja 4: Hierarchie dziedziczenia
     // ============================================================
 
     static String describeShape(Shape shape) {
-        // Check most specific type first (Square before Rect)
+        // Sprawdź najpierw najbardziej konkretny typ (Square przed Rect)
         if (shape instanceof Square sq) {
             return "Square with side " + sq.side() + " (area: " + sq.area() + ")";
         } else if (shape instanceof Rect r) {
@@ -552,19 +557,19 @@ public class PatternMatchingForInstanceof {
                 new Rect(7.0, 2.0)
         );
 
-        // describeShape — checking most specific first
+        // describeShape — sprawdzanie najbardziej konkretnego typu najpierw
         System.out.println("--- describeShape: most specific type first ---");
         for (Shape shape : shapes) {
             System.out.println("  " + describeShape(shape));
         }
 
-        // Perimeter via pattern matching (external operation)
+        // Obwód przez dopasowywanie wzorców (operacja zewnętrzna)
         System.out.println("\n--- Perimeter via instanceof (external operation) ---");
         for (Shape shape : shapes) {
             System.out.printf("  %-25s → perimeter: %.2f%n", shape, perimeter(shape));
         }
 
-        // Why order matters — demonstrating Square is a Rect
+        // Dlaczego kolejność ma znaczenie — demonstracja że Square jest Rect
         System.out.println("\n--- Why order matters: Square is a Rect ---");
         Shape square = new Square(5.0);
         System.out.println("  square instanceof Square: " + (square instanceof Square));
@@ -572,17 +577,17 @@ public class PatternMatchingForInstanceof {
         System.out.println("  square instanceof Shape:  " + (square instanceof Shape));
         System.out.println("  → Must check Square before Rect to get the specific match");
 
-        // Polymorphism for area vs pattern matching for description
+        // Polimorfizm dla area vs dopasowywanie wzorców dla opisu
         System.out.println("\n--- Polymorphism (area) vs pattern matching (describe) ---");
         for (Shape shape : shapes) {
-            // area() uses polymorphism — each shape computes its own area
+            // area() używa polimorfizmu — każdy kształt oblicza swoje własne pole
             double area = shape.area();
-            // describeShape uses pattern matching — external operation
+            // describeShape używa dopasowywania wzorców — operacja zewnętrzna
             String desc = describeShape(shape);
             System.out.printf("  area()=%-10.2f  describe()=%s%n", area, desc);
         }
 
-        // Mixed approach: polymorphism + pattern matching
+        // Podejście mieszane: polimorfizm + dopasowywanie wzorców
         System.out.println("\n--- Mixed approach ---");
         for (Shape shape : shapes) {
             String extra = "";
@@ -598,7 +603,7 @@ public class PatternMatchingForInstanceof {
     }
 
     // ============================================================
-    // Section 5: Practical Patterns
+    // Sekcja 5: Wzorce praktyczne
     // ============================================================
 
     static String formatObject(Object obj) {
@@ -621,7 +626,7 @@ public class PatternMatchingForInstanceof {
     static void practicalPatterns() {
         System.out.println("\n=== Section 5: Practical Patterns ===");
 
-        // Sensor.equals() demo — most common use case
+        // Demonstracja Sensor.equals() — najczęstszy przypadek użycia
         System.out.println("--- Sensor.equals() with pattern matching ---");
         var s1 = new Sensor(1, "temperature");
         var s2 = new Sensor(1, "temperature");
@@ -637,14 +642,14 @@ public class PatternMatchingForInstanceof {
         System.out.println("  s1.equals(null):               " + s1.equals(null));
         System.out.println("  s1.equals(\"string\"):           " + s1.equals("string"));
 
-        // Sensors as map keys (equals + hashCode)
+        // Sensory jako klucze mapy (equals + hashCode)
         var sensorMap = new HashMap<Sensor, String>();
         sensorMap.put(s1, "Living Room");
         sensorMap.put(s3, "Bathroom");
         System.out.println("  sensorMap.get(new Sensor(1, \"temperature\")): "
                 + sensorMap.get(new Sensor(1, "temperature")));
 
-        // Stream filtering by type — extracting all Dogs
+        // Filtrowanie Stream po typie — wyodrębnianie wszystkich Dog
         System.out.println("\n--- Stream filtering by type ---");
         List<Animal> animals = List.of(
                 new Dog("Rex", "German Shepherd"),
@@ -661,7 +666,7 @@ public class PatternMatchingForInstanceof {
                 .toList();
         System.out.println("  All dogs: " + dogs.stream().map(d -> d.name() + " (" + d.breed() + ")").toList());
 
-        // Alternative: using mapMulti for type-safe filtering
+        // Alternatywa: użycie mapMulti do bezpiecznego typowo filtrowania
         List<String> dogNames = animals.stream()
                 .<String>mapMulti((animal, consumer) -> {
                     if (animal instanceof Dog d) {
@@ -671,7 +676,7 @@ public class PatternMatchingForInstanceof {
                 .toList();
         System.out.println("  Dogs (mapMulti): " + dogNames);
 
-        // Heterogeneous container: List<Object>
+        // Kontener heterogeniczny: List<Object>
         System.out.println("\n--- Processing heterogeneous List<Object> ---");
         List<Object> mixed = List.of("hello", 42, 3.14, true, List.of(1, 2), "world", 100);
         int stringCount = 0;
@@ -694,7 +699,7 @@ public class PatternMatchingForInstanceof {
         }
         System.out.println("  → Strings: " + stringCount + ", Numbers: " + numberCount);
 
-        // Formatting animals without visitor pattern
+        // Formatowanie zwierząt bez wzorca visitor
         System.out.println("\n--- Formatting animals (no visitor needed) ---");
         for (Animal animal : animals) {
             String formatted;
@@ -710,7 +715,7 @@ public class PatternMatchingForInstanceof {
             System.out.println("  " + formatted);
         }
 
-        // Null safety: null instanceof X is always false
+        // Bezpieczeństwo null: null instanceof X jest zawsze false
         System.out.println("\n--- Null safety ---");
         Animal nullAnimal = null;
         System.out.println("  null instanceof Dog:    " + (nullAnimal instanceof Dog));
@@ -719,7 +724,7 @@ public class PatternMatchingForInstanceof {
         System.out.println("  null instanceof Object: " + (nullAnimal instanceof Object));
         System.out.println("  → null instanceof <anything> is always false — no NPE risk");
 
-        // formatObject helper
+        // Metoda pomocnicza formatObject
         System.out.println("\n--- formatObject helper ---");
         List<Object> objects = List.of("test", 42, 3.14, true, List.of("a", "b"));
         for (Object obj : objects) {
@@ -729,7 +734,7 @@ public class PatternMatchingForInstanceof {
     }
 
     // ============================================================
-    // Section 6: Pattern Matching Evolution
+    // Sekcja 6: Ewolucja dopasowywania wzorców
     // ============================================================
 
     static String describeAnimal(Animal animal) {
@@ -755,13 +760,13 @@ public class PatternMatchingForInstanceof {
                 new Bird("Kiwi", false)
         );
 
-        // Java 16 style: instanceof if/else chain
+        // Styl Java 16: łańcuch if/else z instanceof
         System.out.println("--- Java 16: instanceof if/else chain ---");
         for (Animal animal : animals) {
             System.out.println("  " + describeAnimal(animal));
         }
 
-        // Java 21 style: rewrite as switch expression
+        // Styl Java 21: przepisanie jako wyrażenie switch
         System.out.println("\n--- Java 21: switch expression rewrite ---");
         for (Animal animal : animals) {
             var description = switch (animal) {
@@ -773,7 +778,7 @@ public class PatternMatchingForInstanceof {
             System.out.println("  " + description);
         }
 
-        // Java 21: switch with `when` guards
+        // Java 21: switch ze strażnikami `when`
         System.out.println("\n--- Java 21: switch with 'when' guards ---");
         for (Animal animal : animals) {
             var label = switch (animal) {
@@ -789,14 +794,14 @@ public class PatternMatchingForInstanceof {
             System.out.println("  " + label);
         }
 
-        // Java 22+: unnamed patterns _ (conceptual)
+        // Java 22+: nienazwane wzorce _ (koncepcyjnie)
         System.out.println("\n--- Java 22+: unnamed patterns (conceptual) ---");
         System.out.println("  // In Java 22+, you can use _ to ignore components:");
         System.out.println("  // case Dog _ -> \"It's a dog\";  // don't need the binding");
         System.out.println("  // case Point(var x, _) -> \"x=\" + x;  // ignore y");
         System.out.println("  // Useful when you only care about the type, not the data");
 
-        // Demonstrating unnamed variable with switch
+        // Demonstracja nienazwanej zmiennej z switch
         for (Animal animal : animals) {
             var kind = switch (animal) {
                 case Dog _ -> "Dog";
@@ -807,7 +812,7 @@ public class PatternMatchingForInstanceof {
             System.out.println("  " + animal.name() + " is a " + kind);
         }
 
-        // Exhaustiveness with sealed types (conceptual)
+        // Wyczerpywalność z typami sealed (koncepcyjnie)
         System.out.println("\n--- Exhaustiveness note ---");
         System.out.println("  If Animal were a sealed class permitting only Dog, Cat, Bird:");
         System.out.println("  sealed abstract class Animal permits Dog, Cat, Bird {}");
@@ -816,7 +821,7 @@ public class PatternMatchingForInstanceof {
         System.out.println("  Adding a new subtype (e.g., Fish) would trigger compile errors");
         System.out.println("  in every switch that doesn't handle it.");
 
-        // Evolution timeline summary
+        // Podsumowanie harmonogramu ewolucji
         System.out.println("\n--- Pattern matching evolution timeline ---");
         System.out.println("  Java 14-15: instanceof patterns (preview)");
         System.out.println("  Java 16:    instanceof patterns (finalized, JEP 394)");
@@ -827,7 +832,7 @@ public class PatternMatchingForInstanceof {
     }
 
     // ============================================================
-    // Main — run all sections
+    // Main — uruchomienie wszystkich sekcji
     // ============================================================
 
     public static void main(String[] args) {

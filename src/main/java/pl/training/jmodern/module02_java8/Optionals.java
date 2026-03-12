@@ -4,171 +4,170 @@ import java.util.*;
 import java.util.stream.*;
 
 // ============================================================
-// Section 1: Introduction to Optional
+// Sekcja 1: Wprowadzenie do Optional
 // ============================================================
 
 /*
-## Introduction to Optional
+## Wprowadzenie do Optional
 
-- `Optional<T>` is a container object that may or may not hold a
-  non-null value. Introduced in Java 8 to provide a **type-level**
-  solution for representing the absence of a value.
-- **Why it was introduced**: `NullPointerException` is the most
-  common runtime exception in Java. When a method returns `null`,
-  the caller has no way of knowing — from the signature alone —
-  whether `null` is a valid return. `Optional` makes "absence"
-  **explicit** in the type system.
-- **`Optional` as return type vs returning `null`**:
-    - Returning `null` forces every caller to defensively check
-      for `null`, and forgetting the check leads to NPE.
-    - Returning `Optional<T>` communicates *intent*: "this method
-      may legitimately not produce a result." The compiler and IDE
-      can guide the caller to handle both cases.
-- **`Optional` is not a general-purpose `Maybe`**: it was designed
-  for **method return types**, not for:
-    - **Fields** — adds indirection, breaks serialization.
-    - **Method parameters** — use overloading or `@Nullable`.
-    - **Collections** — use an empty collection instead.
-- **Relationship to the null-object pattern**: both approaches
-  eliminate explicit null checks, but Optional is a general-purpose
-  container while the null-object pattern provides a domain-specific
-  "do nothing" implementation of an interface.
+- `Optional<T>` to obiekt kontenerowy, który może, ale nie musi, przechowywać
+  wartość różną od null. Wprowadzony w Java 8 w celu dostarczenia rozwiązania
+  na **poziomie typów** do reprezentowania braku wartości.
+- **Dlaczego został wprowadzony**: `NullPointerException` to najczęstszy
+  wyjątek czasu wykonania w Javie. Gdy metoda zwraca `null`,
+  wywołujący nie ma sposobu — patrząc na samą sygnaturę —
+  aby wiedzieć, czy `null` jest poprawnym zwracanym wynikiem. `Optional` sprawia,
+  że "brak" jest **jawny** w systemie typów.
+- **`Optional` jako typ zwracany vs zwracanie `null`**:
+    - Zwracanie `null` zmusza każdego wywołującego do defensywnego sprawdzania
+      `null`, a zapomnienie o sprawdzeniu prowadzi do NPE.
+    - Zwracanie `Optional<T>` komunikuje *intencję*: "ta metoda
+      może legalnie nie wytworzyć wyniku." Kompilator i IDE
+      mogą kierować wywołującego do obsługi obu przypadków.
+- **`Optional` nie jest ogólnym `Maybe`**: został zaprojektowany
+  dla **typów zwracanych metod**, nie dla:
+    - **Pól** — dodaje pośredniość, psuje serializację.
+    - **Parametrów metod** — użyj przeciążania lub `@Nullable`.
+    - **Kolekcji** — zamiast tego użyj pustej kolekcji.
+- **Relacja ze wzorcem null-object**: oba podejścia
+  eliminują jawne sprawdzanie null, ale Optional jest kontenerem
+  ogólnego przeznaczenia, podczas gdy wzorzec null-object dostarcza domenowo-specyficzną
+  implementację "nic nie rób" interfejsu.
 */
 
 // ============================================================
-// Section 2: Creating Optionals
+// Sekcja 2: Tworzenie obiektów Optional
 // ============================================================
 
 /*
-## Creating Optionals
+## Tworzenie obiektów Optional
 
-- `Optional.of(value)` — wraps a non-null value. Throws
-  `NullPointerException` immediately if `value` is null.
-  Use when you are certain the value is not null.
-- `Optional.ofNullable(value)` — wraps the value if non-null,
-  returns `Optional.empty()` if null. Use when the value may
-  legitimately be null (e.g., from a legacy API).
-- `Optional.empty()` — returns an empty Optional. Use as a
-  return value when there is no result to provide.
-- **When to use each factory method**:
-    - `of()` → fast-fail if null (programming error to pass null).
-    - `ofNullable()` → gracefully handle nullable values.
-    - `empty()` → explicit "no result" in conditional returns.
-- **Primitive variants**: `OptionalInt`, `OptionalLong`,
-  `OptionalDouble` — avoid autoboxing overhead. They mirror
-  `Optional<T>` but with primitive-specific methods like
-  `getAsInt()`, `orElse(int)`, etc.
+- `Optional.of(value)` — opakowuje wartość różną od null. Rzuca
+  `NullPointerException` natychmiast, jeśli `value` jest null.
+  Używaj, gdy masz pewność, że wartość nie jest null.
+- `Optional.ofNullable(value)` — opakowuje wartość, jeśli jest różna od null,
+  zwraca `Optional.empty()`, jeśli jest null. Używaj, gdy wartość może
+  legalnie być null (np. z legacy API).
+- `Optional.empty()` — zwraca pusty Optional. Używaj jako
+  wartość zwracaną, gdy nie ma wyniku do dostarczenia.
+- **Kiedy używać której metody fabrycznej**:
+    - `of()` → szybkie zgłoszenie błędu jeśli null (błąd programistyczny przy przekazaniu null).
+    - `ofNullable()` → elegancka obsługa wartości nullable.
+    - `empty()` → jawne "brak wyniku" w warunkowych zwracaniach.
+- **Warianty prymitywne**: `OptionalInt`, `OptionalLong`,
+  `OptionalDouble` — unikanie narzutu autoboxingu. Odzwierciedlają
+  `Optional<T>`, ale z metodami specyficznymi dla prymitywów, takimi jak
+  `getAsInt()`, `orElse(int)`, itp.
 */
 
 // ============================================================
-// Section 3: Checking and Extracting Values
+// Sekcja 3: Sprawdzanie i wyodrębnianie wartości
 // ============================================================
 
 /*
-## Checking and Extracting Values
+## Sprawdzanie i wyodrębnianie wartości
 
-- `isPresent()` — returns `true` if a value is present.
-- `isEmpty()` (Java 11) — returns `true` if no value is present;
-  the logical negation of `isPresent()`.
-- `get()` — returns the value if present, otherwise throws
-  `NoSuchElementException`. **Avoid in production code** — it
-  defeats the purpose of Optional by introducing a potential
-  unchecked exception.
-- `orElse(defaultValue)` — returns the value if present, or
-  the provided default. The default is **always evaluated**,
-  even when the Optional has a value.
-- `orElseGet(Supplier)` — returns the value if present, or
-  **lazily** computes the default using the Supplier. The
-  Supplier is called **only when the Optional is empty**.
-- `orElseThrow()` (Java 10) — same as `get()` but with a
-  clearer, more intentional name.
-- `orElseThrow(Supplier<Exception>)` — throws a custom
-  exception if empty. Preferred for domain-specific errors.
-- **Important**: `orElse` vs `orElseGet` — `orElse` always
-  evaluates its argument (which can be costly), while
-  `orElseGet` defers evaluation. Use `orElseGet` when the
-  default value is expensive to compute.
+- `isPresent()` — zwraca `true`, jeśli wartość jest obecna.
+- `isEmpty()` (Java 11) — zwraca `true`, jeśli wartość nie jest obecna;
+  logiczna negacja `isPresent()`.
+- `get()` — zwraca wartość, jeśli jest obecna, w przeciwnym razie rzuca
+  `NoSuchElementException`. **Unikaj w kodzie produkcyjnym** — niweczy
+  cel Optional, wprowadzając potencjalny niekontrolowany wyjątek.
+- `orElse(defaultValue)` — zwraca wartość, jeśli jest obecna, lub
+  podaną wartość domyślną. Wartość domyślna jest **zawsze ewaluowana**,
+  nawet gdy Optional zawiera wartość.
+- `orElseGet(Supplier)` — zwraca wartość, jeśli jest obecna, lub
+  **leniwie** oblicza wartość domyślną za pomocą Supplier. Supplier
+  jest wywoływany **tylko gdy Optional jest pusty**.
+- `orElseThrow()` (Java 10) — to samo co `get()`, ale z
+  jaśniejszą, bardziej intencjonalną nazwą.
+- `orElseThrow(Supplier<Exception>)` — rzuca niestandardowy
+  wyjątek, jeśli jest pusty. Preferowane dla błędów domenowych.
+- **Ważne**: `orElse` vs `orElseGet` — `orElse` zawsze
+  ewaluuje swój argument (co może być kosztowne), podczas gdy
+  `orElseGet` odracza ewaluację. Używaj `orElseGet`, gdy
+  wartość domyślna jest kosztowna do obliczenia.
 */
 
 // ============================================================
-// Section 4: Transforming Optionals (map, flatMap, filter)
+// Sekcja 4: Transformacja Optional (map, flatMap, filter)
 // ============================================================
 
 /*
-## Transforming Optionals (`map`, `flatMap`, `filter`)
+## Transformacja Optional (`map`, `flatMap`, `filter`)
 
-- `map(Function)` — if a value is present, applies the function
-  and wraps the result in a new Optional. If empty, returns empty.
-  Signature: `Optional<T>.map(T -> U)` → `Optional<U>`.
-- `flatMap(Function)` — like `map`, but the mapping function
-  itself returns `Optional<U>`. Avoids `Optional<Optional<T>>`.
-  Use when the transformation may also produce an absent result.
-- `filter(Predicate)` — if the value is present **and** matches
-  the predicate, returns the same Optional; otherwise returns empty.
-- **Chaining**: `map`, `filter`, and `flatMap` can be chained to
-  build fluent pipelines that replace nested null checks:
+- `map(Function)` — jeśli wartość jest obecna, stosuje funkcję
+  i opakowuje wynik w nowy Optional. Jeśli pusty, zwraca pusty.
+  Sygnatura: `Optional<T>.map(T -> U)` → `Optional<U>`.
+- `flatMap(Function)` — jak `map`, ale funkcja mapująca
+  sama zwraca `Optional<U>`. Unika `Optional<Optional<T>>`.
+  Używaj, gdy transformacja może również wytworzyć brak wyniku.
+- `filter(Predicate)` — jeśli wartość jest obecna **i** pasuje do
+  predykatu, zwraca ten sam Optional; w przeciwnym razie zwraca pusty.
+- **Łączenie w łańcuchy**: `map`, `filter` i `flatMap` mogą być łączone
+  w łańcuchy, aby budować płynne potoki zastępujące zagnieżdżone sprawdzanie null:
   ```
   optional.map(User::getAddress)
           .map(Address::getCity)
           .filter(city -> city.startsWith("W"))
           .orElse("Unknown")
   ```
-- **`map` vs `flatMap`** — the same distinction as in the Stream
-  API: use `map` when the function returns a plain value, use
-  `flatMap` when the function returns an `Optional`.
+- **`map` vs `flatMap`** — to samo rozróżnienie co w Stream
+  API: używaj `map`, gdy funkcja zwraca zwykłą wartość, używaj
+  `flatMap`, gdy funkcja zwraca `Optional`.
 */
 
 // ============================================================
-// Section 5: Conditional Actions (ifPresent, ifPresentOrElse)
+// Sekcja 5: Akcje warunkowe (ifPresent, ifPresentOrElse)
 // ============================================================
 
 /*
-## Conditional Actions (`ifPresent`, `ifPresentOrElse`)
+## Akcje warunkowe (`ifPresent`, `ifPresentOrElse`)
 
-- `ifPresent(Consumer)` — executes the given action only if a
-  value is present. Returns `void`. This is the "do something"
-  equivalent of `map` (which is "transform something").
-- `ifPresentOrElse(Consumer, Runnable)` (Java 9) — executes the
-  Consumer if present, or the Runnable if empty. Handles both
-  cases in a single call.
-- **Replacing `if (x != null)` patterns**: instead of:
+- `ifPresent(Consumer)` — wykonuje podaną akcję tylko jeśli
+  wartość jest obecna. Zwraca `void`. To odpowiednik "zrób coś"
+  dla `map` (który jest "przekształć coś").
+- `ifPresentOrElse(Consumer, Runnable)` (Java 9) — wykonuje
+  Consumer, jeśli wartość jest obecna, lub Runnable, jeśli jest pusty. Obsługuje oba
+  przypadki w jednym wywołaniu.
+- **Zastępowanie wzorców `if (x != null)`**: zamiast:
   ```
   if (opt.isPresent()) {
       process(opt.get());
   }
   ```
-  use:
+  użyj:
   ```
   opt.ifPresent(this::process);
   ```
-- **`ifPresent` vs `isPresent` + `get`**: `ifPresent` is safer
-  because it eliminates the possibility of calling `get()` on
-  an empty Optional. It expresses intent more clearly and is
-  more concise.
+- **`ifPresent` vs `isPresent` + `get`**: `ifPresent` jest bezpieczniejsze,
+  ponieważ eliminuje możliwość wywołania `get()` na
+  pustym Optional. Wyraża intencję jaśniej i jest
+  bardziej zwięzłe.
 */
 
 // ============================================================
-// Section 6: Combining Optionals (or, stream)
+// Sekcja 6: Łączenie Optional (or, stream)
 // ============================================================
 
 /*
-## Combining Optionals (`or`, `stream`)
+## Łączenie Optional (`or`, `stream`)
 
-- `or(Supplier<Optional>)` (Java 9) — if a value is present,
-  returns `this`; otherwise returns the Optional produced by the
-  Supplier. Unlike `orElse`/`orElseGet` which unwrap to the raw
-  value, `or()` stays in the Optional world.
-- `stream()` (Java 9) — converts the Optional to a zero-or-one
-  element Stream. Returns `Stream.of(value)` if present, or
-  `Stream.empty()` if not.
-- **Using `stream()` with `flatMap` to filter empty Optionals**:
-  given a `List<Optional<T>>`, you can extract all present values:
+- `or(Supplier<Optional>)` (Java 9) — jeśli wartość jest obecna,
+  zwraca `this`; w przeciwnym razie zwraca Optional wytworzony przez
+  Supplier. W odróżnieniu od `orElse`/`orElseGet`, które rozpakowują do surowej
+  wartości, `or()` pozostaje w świecie Optional.
+- `stream()` (Java 9) — konwertuje Optional na Stream
+  o zero lub jednym elemencie. Zwraca `Stream.of(value)`, jeśli obecny, lub
+  `Stream.empty()`, jeśli nie.
+- **Użycie `stream()` z `flatMap` do filtrowania pustych Optional**:
+  mając `List<Optional<T>>`, możesz wyodrębnić wszystkie obecne wartości:
   ```
   optionals.stream()
            .flatMap(Optional::stream)
            .collect(toList())
   ```
-- **Fallback chains**: multiple `or()` calls can be chained:
+- **Łańcuchy zapasowe**: wiele wywołań `or()` może być łączonych w łańcuchy:
   ```
   findInCache(key)
       .or(() -> findInDatabase(key))
@@ -177,78 +176,78 @@ import java.util.stream.*;
 */
 
 // ============================================================
-// Section 7: Optional with Streams
+// Sekcja 7: Optional ze strumieniami
 // ============================================================
 
 /*
-## Optional with Streams
+## Optional ze strumieniami
 
-- Many Stream terminal operations return Optional:
-    - `findFirst()` / `findAny()` — first/any matching element.
-    - `min(Comparator)` / `max(Comparator)` — smallest/largest.
-    - `reduce(BinaryOperator)` — accumulated result (the
-      two-argument `reduce(identity, op)` does **not** return
-      Optional because it always has the identity as a fallback).
-- `Optional.stream()` (Java 9) bridges Optional back into the
-  Stream world, enabling integration in larger pipelines.
-- **Pattern: `Stream<Optional<T>>` → `Stream<T>`**:
+- Wiele operacji terminalnych Stream zwraca Optional:
+    - `findFirst()` / `findAny()` — pierwszy/dowolny pasujący element.
+    - `min(Comparator)` / `max(Comparator)` — najmniejszy/największy.
+    - `reduce(BinaryOperator)` — zakumulowany wynik (dwuargumentowe
+      `reduce(identity, op)` **nie** zwraca Optional, ponieważ zawsze
+      ma tożsamość jako wartość zapasową).
+- `Optional.stream()` (Java 9) łączy Optional z powrotem ze światem
+  Stream, umożliwiając integrację w większych potokach.
+- **Wzorzec: `Stream<Optional<T>>` → `Stream<T>`**:
   ```
   stream.flatMap(Optional::stream)
   ```
-  This replaces the pre-Java-9 idiom:
+  To zastępuje idiom sprzed Java 9:
   ```
   stream.filter(Optional::isPresent).map(Optional::get)
   ```
-- **Primitive Optional variants**: primitive streams (`IntStream`,
-  `LongStream`, `DoubleStream`) return `OptionalInt`,
-  `OptionalLong`, `OptionalDouble` from `min()`, `max()`,
+- **Prymitywne warianty Optional**: strumienie prymitywne (`IntStream`,
+  `LongStream`, `DoubleStream`) zwracają `OptionalInt`,
+  `OptionalLong`, `OptionalDouble` z `min()`, `max()`,
   `findFirst()`, `average()`, `reduce()`.
 */
 
 // ============================================================
-// Section 8: Common Patterns and Anti-Patterns
+// Sekcja 8: Typowe wzorce i antywzorce
 // ============================================================
 
 /*
-## Common Patterns and Anti-Patterns
+## Typowe wzorce i antywzorce
 
-- **Anti-pattern**: `if (opt.isPresent()) opt.get()` — use
-  `orElse`, `map`, or `ifPresent` instead. Using `get()` after
-  `isPresent()` is verbose and error-prone.
-- **Anti-pattern**: `Optional` as method parameter — forces
-  callers to wrap values unnecessarily. Use method overloading
-  or `@Nullable` annotations instead.
-- **Anti-pattern**: `Optional` as field type — adds memory
-  overhead, breaks serialization frameworks. Use `null` internally
-  and expose Optional via a getter if needed:
+- **Antywzorzec**: `if (opt.isPresent()) opt.get()` — zamiast tego użyj
+  `orElse`, `map` lub `ifPresent`. Użycie `get()` po
+  `isPresent()` jest rozwlekłe i podatne na błędy.
+- **Antywzorzec**: `Optional` jako parametr metody — zmusza
+  wywołujących do niepotrzebnego opakowywania wartości. Zamiast tego użyj
+  przeciążania metod lub adnotacji `@Nullable`.
+- **Antywzorzec**: `Optional` jako typ pola — dodaje narzut
+  pamięciowy, psuje frameworki serializacji. Używaj `null` wewnętrznie
+  i udostępniaj Optional poprzez getter, jeśli potrzeba:
   ```
   private String email; // nullable
   public Optional<String> getEmail() { return Optional.ofNullable(email); }
   ```
-- **Anti-pattern**: `Optional.of(collection)` — an empty collection
-  already represents "no elements". Wrapping it adds nothing.
-  Prefer returning an empty `List`/`Set`/`Map`.
-- **Pattern**: replacing nested null checks with `map`/`flatMap`:
+- **Antywzorzec**: `Optional.of(collection)` — pusta kolekcja
+  już reprezentuje "brak elementów". Opakowywanie jej nic nie dodaje.
+  Preferuj zwracanie pustej `List`/`Set`/`Map`.
+- **Wzorzec**: zastępowanie zagnieżdżonych sprawdzeń null za pomocą `map`/`flatMap`:
   ```
-  // Before: if (user != null && user.getAddress() != null && ...)
-  // After:
+  // Przed: if (user != null && user.getAddress() != null && ...)
+  // Po:
   Optional.ofNullable(user)
           .flatMap(User::optionalAddress)
           .map(Address::city)
           .orElse("unknown")
   ```
-- **Pattern**: Optional in return types for repository/finder
-  methods: `Optional<User> findByEmail(String email)`.
-- **Pattern**: converting legacy nullable APIs to Optional:
+- **Wzorzec**: Optional w typach zwracanych dla metod repozytorium/wyszukiwania:
+  `Optional<User> findByEmail(String email)`.
+- **Wzorzec**: konwersja legacy nullable API na Optional:
   `Optional.ofNullable(legacyMap.get(key))`.
-- **Serialization warning**: `Optional` does **not** implement
-  `Serializable`. It should not be used as a field in classes
-  that need to be serialized (DTOs, entities, etc.).
+- **Ostrzeżenie dotyczące serializacji**: `Optional` **nie** implementuje
+  `Serializable`. Nie powinien być używany jako pole w klasach,
+  które muszą być serializowane (DTO, encje, itp.).
 */
 
 public class Optionals {
 
-    // --- Helper types for demonstrations ---
+    // --- Typy pomocnicze do demonstracji ---
 
     record Address(String city, String zip) {}
 
@@ -263,7 +262,7 @@ public class Optionals {
         }
     }
 
-    // --- Helper repository methods ---
+    // --- Pomocnicze metody repozytorium ---
 
     private static final Map<String, User> USER_DB = Map.of(
             "alice", new User("Alice", "alice@example.com", new Address("Warsaw", "00-001")),
@@ -279,64 +278,64 @@ public class Optionals {
         return findUserByName(name).flatMap(User::optionalEmail);
     }
 
-    // Simulates an expensive default computation
+    // Symuluje kosztowne obliczanie wartości domyślnej
     static String computeExpensiveDefault() {
         System.out.println("  (computing expensive default...)");
         return "default@example.com";
     }
 
     // ============================================================
-    // Section 1: Introduction to Optional
+    // Sekcja 1: Wprowadzenie do Optional
     // ============================================================
 
     static void introductionToOptional() {
         System.out.println("=== Introduction to Optional ===");
 
-        // The problem: a method returns null — caller has no type-level signal
+        // Problem: metoda zwraca null — wywołujący nie ma sygnału na poziomie typów
         Map<String, String> config = Map.of("host", "localhost", "port", "8080");
-        String timeout = config.get("timeout"); // returns null — no entry
-        // Without Optional, we must remember to check:
+        String timeout = config.get("timeout"); // zwraca null — brak wpisu
+        // Bez Optional musimy pamiętać o sprawdzeniu:
         if (timeout != null) {
             System.out.println("timeout: " + timeout);
         } else {
             System.out.println("timeout not configured (null check)");
         }
 
-        // With Optional: intent is explicit in the return type
+        // Z Optional: intencja jest jawna w typie zwracanym
         Optional<String> maybeTimeout = Optional.ofNullable(config.get("timeout"));
         System.out.println("timeout via Optional: " + maybeTimeout.orElse("30s (default)"));
 
-        // Optional communicates that absence is a valid outcome
+        // Optional komunikuje, że brak wartości jest poprawnym wynikiem
         Optional<User> foundUser = findUserByName("alice");
         Optional<User> missingUser = findUserByName("unknown");
         System.out.println("found user: " + foundUser);
         System.out.println("missing user: " + missingUser);
 
-        // Optional vs null-object pattern
-        // null-object: a concrete "do nothing" implementation (domain-specific)
-        // Optional: a general-purpose container for any type
+        // Optional vs wzorzec null-object
+        // null-object: konkretna implementacja "nic nie rób" (domenowo-specyficzna)
+        // Optional: kontener ogólnego przeznaczenia dla dowolnego typu
         System.out.println("Optional.empty() is a general-purpose 'no value': " + Optional.empty());
     }
 
     // ============================================================
-    // Section 2: Creating Optionals
+    // Sekcja 2: Tworzenie obiektów Optional
     // ============================================================
 
     static void creatingOptionals() {
         System.out.println("\n=== Creating Optionals ===");
 
-        // Optional.of — wraps a non-null value
+        // Optional.of — opakowuje wartość różną od null
         Optional<String> present = Optional.of("Hello");
         System.out.println("Optional.of(\"Hello\"): " + present);
 
-        // Optional.of(null) throws NullPointerException immediately
+        // Optional.of(null) rzuca NullPointerException natychmiast
         try {
             Optional.of(null);
         } catch (NullPointerException e) {
             System.out.println("Optional.of(null): NullPointerException — " + e.getMessage());
         }
 
-        // Optional.ofNullable — safe for potentially null values
+        // Optional.ofNullable — bezpieczne dla potencjalnie null wartości
         String value = null;
         Optional<String> nullable = Optional.ofNullable(value);
         System.out.println("Optional.ofNullable(null): " + nullable);
@@ -344,16 +343,16 @@ public class Optionals {
         Optional<String> nonNull = Optional.ofNullable("World");
         System.out.println("Optional.ofNullable(\"World\"): " + nonNull);
 
-        // Optional.empty — the empty Optional
+        // Optional.empty — pusty Optional
         Optional<String> empty = Optional.empty();
         System.out.println("Optional.empty(): " + empty);
 
-        // When to use which:
-        // of()         → you know the value is non-null (fail-fast if wrong)
-        // ofNullable() → the value may be null (from legacy API, Map.get, etc.)
-        // empty()      → explicitly returning "no result"
+        // Kiedy używać którego:
+        // of()         → wiesz, że wartość nie jest null (szybkie zgłoszenie błędu, jeśli się mylisz)
+        // ofNullable() → wartość może być null (z legacy API, Map.get, itp.)
+        // empty()      → jawne zwracanie "brak wyniku"
 
-        // Primitive variants — avoid autoboxing
+        // Warianty prymitywne — unikanie autoboxingu
         OptionalInt optInt = OptionalInt.of(42);
         OptionalLong optLong = OptionalLong.of(100_000_000L);
         OptionalDouble optDouble = OptionalDouble.of(3.14);
@@ -366,7 +365,7 @@ public class Optionals {
     }
 
     // ============================================================
-    // Section 3: Checking and Extracting Values
+    // Sekcja 3: Sprawdzanie i wyodrębnianie wartości
     // ============================================================
 
     static void checkingAndExtractingValues() {
@@ -380,7 +379,7 @@ public class Optionals {
         System.out.println("empty.isPresent(): " + empty.isPresent());
         System.out.println("empty.isEmpty(): " + empty.isEmpty()); // Java 11
 
-        // get() — throws NoSuchElementException if empty (avoid in production)
+        // get() — rzuca NoSuchElementException jeśli pusty (unikaj w produkcji)
         System.out.println("present.get(): " + present.get());
         try {
             empty.get();
@@ -388,26 +387,26 @@ public class Optionals {
             System.out.println("empty.get(): NoSuchElementException — " + e.getMessage());
         }
 
-        // orElse — return default value (always evaluated)
+        // orElse — zwraca wartość domyślną (zawsze ewaluowana)
         System.out.println("present.orElse(\"default\"): " + present.orElse("default"));
         System.out.println("empty.orElse(\"default\"): " + empty.orElse("default"));
 
-        // orElseGet — lazily compute default (Supplier called only when empty)
+        // orElseGet — leniwie oblicza wartość domyślną (Supplier wywoływany tylko gdy pusty)
         System.out.println("present.orElseGet(() -> ...): " + present.orElseGet(() -> "computed"));
         System.out.println("empty.orElseGet(() -> ...): " + empty.orElseGet(() -> "computed"));
 
-        // orElse vs orElseGet — important difference:
-        // orElse ALWAYS evaluates its argument, even when value is present
+        // orElse vs orElseGet — ważna różnica:
+        // orElse ZAWSZE ewaluuje swój argument, nawet gdy wartość jest obecna
         System.out.println("--- orElse vs orElseGet side-effect demo ---");
         System.out.println("present.orElse(expensive): " + present.orElse(computeExpensiveDefault()));
         System.out.println("present.orElseGet(expensive): " + present.orElseGet(Optionals::computeExpensiveDefault));
-        // Notice: orElse printed "(computing expensive default...)" even though value was present
-        // orElseGet did NOT compute the default because the value was present
+        // Zwróć uwagę: orElse wypisało "(computing expensive default...)" mimo że wartość była obecna
+        // orElseGet NIE obliczyło wartości domyślnej, ponieważ wartość była obecna
 
-        // orElseThrow() — Java 10 — same as get() but with a clearer name
+        // orElseThrow() — Java 10 — to samo co get(), ale z jaśniejszą nazwą
         System.out.println("present.orElseThrow(): " + present.orElseThrow());
 
-        // orElseThrow(Supplier) — throw a custom exception
+        // orElseThrow(Supplier) — rzuca niestandardowy wyjątek
         try {
             empty.orElseThrow(() -> new IllegalStateException("value is required"));
         } catch (IllegalStateException e) {
@@ -416,7 +415,7 @@ public class Optionals {
     }
 
     // ============================================================
-    // Section 4: Transforming Optionals (map, flatMap, filter)
+    // Sekcja 4: Transformacja Optional (map, flatMap, filter)
     // ============================================================
 
     static void transformingOptionals() {
@@ -425,7 +424,7 @@ public class Optionals {
         Optional<String> name = Optional.of("Alice");
         Optional<String> empty = Optional.empty();
 
-        // map — transform the value if present
+        // map — transformacja wartości, jeśli jest obecna
         Optional<Integer> nameLength = name.map(String::length);
         Optional<Integer> emptyLength = empty.map(String::length);
         System.out.println("name.map(length): " + nameLength);
@@ -434,23 +433,23 @@ public class Optionals {
         Optional<String> upperName = name.map(String::toUpperCase);
         System.out.println("name.map(toUpperCase): " + upperName);
 
-        // filter — keep value only if it matches the predicate
+        // filter — zachowaj wartość tylko jeśli pasuje do predykatu
         Optional<String> startsWithA = name.filter(n -> n.startsWith("A"));
         Optional<String> startsWithB = name.filter(n -> n.startsWith("B"));
         System.out.println("name.filter(startsWith A): " + startsWithA);
         System.out.println("name.filter(startsWith B): " + startsWithB);
 
-        // flatMap — when the mapping function itself returns Optional
-        // Avoids Optional<Optional<T>>
+        // flatMap — gdy funkcja mapująca sama zwraca Optional
+        // Unika Optional<Optional<T>>
         Optional<String> aliceEmail = findUserByName("Alice").flatMap(User::optionalEmail);
         Optional<String> bobEmail = findUserByName("Bob").flatMap(User::optionalEmail);
         Optional<String> unknownEmail = findUserByName("unknown").flatMap(User::optionalEmail);
         System.out.println("Alice's email (flatMap): " + aliceEmail);
-        System.out.println("Bob's email (flatMap): " + bobEmail);     // empty — Bob has no email
-        System.out.println("Unknown's email (flatMap): " + unknownEmail); // empty — user not found
+        System.out.println("Bob's email (flatMap): " + bobEmail);     // pusty — Bob nie ma emaila
+        System.out.println("Unknown's email (flatMap): " + unknownEmail); // pusty — użytkownik nie znaleziony
 
-        // Chaining map/flatMap/filter for fluent pipelines
-        // "Find Alice's city, but only if it starts with 'W'"
+        // Łączenie map/flatMap/filter w płynne potoki
+        // "Znajdź miasto Alice, ale tylko jeśli zaczyna się na 'W'"
         String city = findUserByName("Alice")
                 .flatMap(User::optionalAddress)
                 .map(Address::city)
@@ -458,16 +457,16 @@ public class Optionals {
                 .orElse("unknown");
         System.out.println("Alice's city (starts with W): " + city);
 
-        // Same chain for Charlie — who has no address
+        // Ten sam łańcuch dla Charlie — który nie ma adresu
         String charlieCity = findUserByName("Charlie")
                 .flatMap(User::optionalAddress)
                 .map(Address::city)
                 .orElse("unknown");
-        System.out.println("Charlie's city: " + charlieCity); // unknown — no address
+        System.out.println("Charlie's city: " + charlieCity); // unknown — brak adresu
 
-        // map vs flatMap comparison
-        // map: function returns a plain value → wrapped in Optional automatically
-        // flatMap: function returns Optional<U> → no double wrapping
+        // Porównanie map vs flatMap
+        // map: funkcja zwraca zwykłą wartość → automatycznie opakowywana w Optional
+        // flatMap: funkcja zwraca Optional<U> → bez podwójnego opakowywania
         Optional<Optional<String>> doubleWrapped = findUserByName("Alice").map(User::optionalEmail);
         Optional<String> singleWrapped = findUserByName("Alice").flatMap(User::optionalEmail);
         System.out.println("map (double wrapped): " + doubleWrapped);
@@ -475,7 +474,7 @@ public class Optionals {
     }
 
     // ============================================================
-    // Section 5: Conditional Actions (ifPresent, ifPresentOrElse)
+    // Sekcja 5: Akcje warunkowe (ifPresent, ifPresentOrElse)
     // ============================================================
 
     static void conditionalActions() {
@@ -484,7 +483,7 @@ public class Optionals {
         Optional<String> present = Optional.of("Java");
         Optional<String> empty = Optional.empty();
 
-        // ifPresent — execute action only if value is present
+        // ifPresent — wykonaj akcję tylko jeśli wartość jest obecna
         System.out.print("present.ifPresent: ");
         present.ifPresent(v -> System.out.println("value is " + v));
 
@@ -492,7 +491,7 @@ public class Optionals {
         empty.ifPresent(v -> System.out.println("value is " + v));
         System.out.println("(nothing printed — empty)");
 
-        // ifPresentOrElse — Java 9 — handle both cases
+        // ifPresentOrElse — Java 9 — obsługa obu przypadków
         present.ifPresentOrElse(
                 v -> System.out.println("ifPresentOrElse (present): " + v),
                 () -> System.out.println("ifPresentOrElse (present): no value")
@@ -502,18 +501,18 @@ public class Optionals {
                 () -> System.out.println("ifPresentOrElse (empty): no value")
         );
 
-        // Replacing if (x != null) patterns
-        // Before:
+        // Zastępowanie wzorców if (x != null)
+        // Przed:
         Optional<User> user = findUserByName("alice");
         if (user.isPresent()) {
             System.out.println("isPresent+get: " + user.get().name());
         }
-        // After (preferred):
+        // Po (preferowane):
         findUserByName("alice").ifPresent(u ->
                 System.out.println("ifPresent: " + u.name())
         );
 
-        // Practical example: send email only if address is present
+        // Praktyczny przykład: wyślij email tylko jeśli adres jest obecny
         findUserByName("alice").flatMap(User::optionalEmail).ifPresentOrElse(
                 email -> System.out.println("sending email to: " + email),
                 () -> System.out.println("no email address — skipping notification")
@@ -526,13 +525,13 @@ public class Optionals {
     }
 
     // ============================================================
-    // Section 6: Combining Optionals (or, stream)
+    // Sekcja 6: Łączenie Optional (or, stream)
     // ============================================================
 
-    // Simulated fallback sources
+    // Symulowane źródła zapasowe
     static Optional<String> findInCache(String key) {
         System.out.println("  looking in cache...");
-        return Optional.empty(); // simulate cache miss
+        return Optional.empty(); // symulacja braku trafienia w cache
     }
 
     static Optional<String> findInDatabase(String key) {
@@ -554,13 +553,13 @@ public class Optionals {
         Optional<String> present = Optional.of("primary");
         Optional<String> empty = Optional.empty();
 
-        // or() — Java 9 — fallback to another Optional (stays in Optional world)
+        // or() — Java 9 — rezerwowe przejście do innego Optional (pozostaje w świecie Optional)
         Optional<String> result1 = present.or(() -> Optional.of("fallback"));
         Optional<String> result2 = empty.or(() -> Optional.of("fallback"));
         System.out.println("present.or(fallback): " + result1);
         System.out.println("empty.or(fallback): " + result2);
 
-        // Chaining multiple or() calls for fallback chains
+        // Łączenie wielu wywołań or() w łańcuchy zapasowe
         System.out.println("--- fallback chain for 'config.timeout' ---");
         String timeout = findInCache("config.timeout")
                 .or(() -> findInDatabase("config.timeout"))
@@ -575,13 +574,13 @@ public class Optionals {
                 .orElse("unknown");
         System.out.println("resolved missing: " + missing);
 
-        // stream() — Java 9 — convert Optional to a zero-or-one element Stream
+        // stream() — Java 9 — konwersja Optional na Stream o zero lub jednym elemencie
         Stream<String> presentStream = present.stream();
         Stream<String> emptyStream = empty.stream();
         System.out.println("present.stream().toList(): " + presentStream.toList());
         System.out.println("empty.stream().toList(): " + emptyStream.toList());
 
-        // Using stream() with flatMap to filter empty Optionals from a collection
+        // Użycie stream() z flatMap do filtrowania pustych Optional z kolekcji
         List<Optional<String>> optionals = List.of(
                 Optional.of("alpha"),
                 Optional.empty(),
@@ -597,7 +596,7 @@ public class Optionals {
     }
 
     // ============================================================
-    // Section 7: Optional with Streams
+    // Sekcja 7: Optional ze strumieniami
     // ============================================================
 
     static void optionalWithStreams() {
@@ -605,7 +604,7 @@ public class Optionals {
 
         List<Integer> numbers = List.of(5, 3, 8, 1, 9, 2, 7);
 
-        // Terminal operations returning Optional
+        // Operacje terminalne zwracające Optional
         Optional<Integer> first = numbers.stream().filter(n -> n > 6).findFirst();
         Optional<Integer> any = numbers.stream().filter(n -> n > 6).findAny();
         Optional<Integer> min = numbers.stream().min(Comparator.naturalOrder());
@@ -618,25 +617,25 @@ public class Optionals {
         System.out.println("max: " + max);
         System.out.println("reduce (sum): " + sum);
 
-        // Empty stream — terminal operations return empty Optional
+        // Pusty strumień — operacje terminalne zwracają pusty Optional
         Optional<Integer> emptyFirst = Stream.<Integer>empty().findFirst();
         Optional<Integer> emptyMin = Stream.<Integer>empty().min(Comparator.naturalOrder());
         System.out.println("findFirst on empty stream: " + emptyFirst);
         System.out.println("min on empty stream: " + emptyMin);
 
-        // reduce with identity does NOT return Optional (always has a result)
+        // reduce z tożsamością NIE zwraca Optional (zawsze ma wynik)
         int sumWithIdentity = numbers.stream().reduce(0, Integer::sum);
         System.out.println("reduce with identity: " + sumWithIdentity);
 
-        // Optional.stream() for integrating into stream pipelines
+        // Optional.stream() do integracji w potokach strumieniowych
         List<String> userNames = List.of("alice", "bob", "unknown", "charlie", "nobody");
         List<String> emails = userNames.stream()
                 .map(Optionals::findEmailByName) // Stream<Optional<String>>
-                .flatMap(Optional::stream)          // Stream<String> — empties removed
+                .flatMap(Optional::stream)          // Stream<String> — puste usunięte
                 .toList();
         System.out.println("emails found: " + emails);
 
-        // Primitive Optional variants from primitive streams
+        // Prymitywne warianty Optional ze strumieni prymitywnych
         OptionalInt maxInt = IntStream.of(10, 20, 30).max();
         OptionalDouble average = IntStream.rangeClosed(1, 10).average();
         OptionalLong minLong = LongStream.of(100L, 200L, 50L).min();
@@ -644,7 +643,7 @@ public class Optionals {
         System.out.println("IntStream.average(): " + average);
         System.out.println("LongStream.min(): " + minLong);
 
-        // Extracting primitive optional values
+        // Wyodrębnianie wartości prymitywnych Optional
         int maxValue = maxInt.orElse(-1);
         double avgValue = average.orElse(0.0);
         System.out.println("maxInt.orElse(-1): " + maxValue);
@@ -652,47 +651,47 @@ public class Optionals {
     }
 
     // ============================================================
-    // Section 8: Common Patterns and Anti-Patterns
+    // Sekcja 8: Typowe wzorce i antywzorce
     // ============================================================
 
     static void commonPatternsAndAntiPatterns() {
         System.out.println("\n=== Common Patterns and Anti-Patterns ===");
 
-        // ANTI-PATTERN 1: isPresent() + get() — verbose and error-prone
+        // ANTYWZORZEC 1: isPresent() + get() — rozwlekłe i podatne na błędy
         Optional<User> user = findUserByName("alice");
-        // Bad:
+        // Źle:
         if (user.isPresent()) {
             System.out.println("[anti-pattern] isPresent+get: " + user.get().name());
         }
-        // Good:
+        // Dobrze:
         user.ifPresent(u -> System.out.println("[pattern] ifPresent: " + u.name()));
         String name = user.map(User::name).orElse("unknown");
         System.out.println("[pattern] map+orElse: " + name);
 
-        // ANTI-PATTERN 2: Optional as method parameter
-        // Bad: void sendEmail(Optional<String> address) { ... }
-        // Good: overload methods or use @Nullable
-        // (not demonstrated in code as it's a design guideline)
+        // ANTYWZORZEC 2: Optional jako parametr metody
+        // Źle: void sendEmail(Optional<String> address) { ... }
+        // Dobrze: przeciąż metody lub użyj @Nullable
+        // (nie demonstrowane w kodzie, ponieważ to wytyczna projektowa)
         System.out.println("[anti-pattern] Optional as parameter — use overloading instead");
 
-        // ANTI-PATTERN 3: Optional as field type
-        // Bad: private Optional<String> email;
-        // Good: private String email; // nullable
+        // ANTYWZORZEC 3: Optional jako typ pola
+        // Źle: private Optional<String> email;
+        // Dobrze: private String email; // nullable
         //       public Optional<String> getEmail() { return Optional.ofNullable(email); }
-        // Our User record demonstrates the correct pattern:
+        // Nasz rekord User demonstruje poprawny wzorzec:
         User bob = new User("Bob", null, null);
         System.out.println("[pattern] nullable field + Optional getter: " + bob.optionalEmail());
 
-        // ANTI-PATTERN 4: Optional.of(emptyCollection)
-        // Bad:
+        // ANTYWZORZEC 4: Optional.of(pustaKolekcja)
+        // Źle:
         Optional<List<String>> wrappedList = Optional.of(List.of());
         System.out.println("[anti-pattern] Optional<List>: " + wrappedList);
-        // Good: just return the empty collection
+        // Dobrze: po prostu zwróć pustą kolekcję
         List<String> emptyList = List.of();
         System.out.println("[pattern] empty collection: " + emptyList);
 
-        // PATTERN: replacing nested null checks with map/flatMap chains
-        // Before (imperative):
+        // WZORZEC: zastępowanie zagnieżdżonych sprawdzeń null łańcuchami map/flatMap
+        // Przed (imperatywnie):
         //   if (user != null) {
         //     Address addr = user.getAddress();
         //     if (addr != null) {
@@ -700,7 +699,7 @@ public class Optionals {
         //       if (city != null) { ... }
         //     }
         //   }
-        // After (functional):
+        // Po (funkcyjnie):
         String aliceCity = findUserByName("alice")
                 .flatMap(User::optionalAddress)
                 .map(Address::city)
@@ -713,8 +712,8 @@ public class Optionals {
                 .orElse("unknown");
         System.out.println("[pattern] charlie's city (no address): " + charlieCity);
 
-        // PATTERN: Optional in return types for repository/finder methods
-        // Our findUserByName demonstrates this — returns Optional<User>
+        // WZORZEC: Optional w typach zwracanych dla metod repozytorium/wyszukiwania
+        // Nasz findUserByName to demonstruje — zwraca Optional<User>
         findUserByName("alice").ifPresentOrElse(
                 u -> System.out.println("[pattern] repository find: " + u.name()),
                 () -> System.out.println("[pattern] repository find: not found")
@@ -724,23 +723,23 @@ public class Optionals {
                 () -> System.out.println("[pattern] repository find: not found")
         );
 
-        // PATTERN: converting legacy nullable APIs to Optional
+        // WZORZEC: konwersja legacy nullable API na Optional
         Map<String, String> legacyConfig = new HashMap<>();
         legacyConfig.put("host", "localhost");
-        // Map.get returns null if key not found — wrap with ofNullable
+        // Map.get zwraca null jeśli klucz nie znaleziony — opakuj za pomocą ofNullable
         Optional<String> host = Optional.ofNullable(legacyConfig.get("host"));
         Optional<String> port = Optional.ofNullable(legacyConfig.get("port"));
         System.out.println("[pattern] legacy API wrapping — host: " + host);
         System.out.println("[pattern] legacy API wrapping — port: " + port);
 
-        // Serialization warning
+        // Ostrzeżenie dotyczące serializacji
         System.out.println("[warning] Optional does NOT implement Serializable");
         System.out.println("  → do not use Optional as field type in DTOs or entities");
         System.out.println("  → use it only as method return type");
     }
 
     // ============================================================
-    // Main — run all sections
+    // Main — uruchomienie wszystkich sekcji
     // ============================================================
 
     public static void main(String[] args) {

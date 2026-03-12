@@ -7,167 +7,166 @@ import java.util.concurrent.StructuredTaskScope.*;
 import java.util.stream.*;
 
 // ============================================================
-// Section 1: Introduction -- Why Structured Concurrency
+// Sekcja 1: Wprowadzenie -- Dlaczego structured concurrency
 // ============================================================
 
 /*
-## Introduction -- Why Structured Concurrency
+## Wprowadzenie -- Dlaczego structured concurrency
 
-- **Problem with unstructured concurrency** (ExecutorService):
-    - Tasks can outlive the parent scope that created them.
-    - If one task fails, sibling tasks keep running (resource leak).
-    - Manual cancellation is error-prone and often forgotten.
-    - Thread dumps show no parent-child relationship.
-- **Analogy**: Structured concurrency is to concurrency what
-  structured programming (if/while) was to goto. Just as we
-  stopped using goto and gained local reasoning about control
-  flow, structured concurrency lets us reason locally about
-  concurrent lifetimes.
-- **Origin**: "Notes on structured concurrency, or: Go statement
-  considered harmful" (Nathaniel J. Smith, 2018). The idea was
-  adopted by Kotlin (coroutineScope), Swift (TaskGroup), and
-  now Java.
-- **JEP timeline**:
-    - JEP 428: Incubator in Java 19
-    - JEP 437: Second incubator in Java 20
-    - JEP 453: Preview in Java 21
-    - JEP 462: Preview in Java 22
-    - JEP 480: Preview in Java 23
-    - JEP 499: Preview in Java 24
-    - JEP 505: Preview in Java 25
-- **Key invariant**: child tasks cannot outlive the scope that
-  created them. When the scope's try-with-resources block ends,
-  all child tasks are guaranteed to be finished (or cancelled).
-- **Builds on virtual threads** (see module02_java21): scopes
-  create virtual threads for each forked task. The combination
-  of cheap threads + scope-bounded lifetimes is the foundation.
-- **`StructuredTaskScope`** is an interface (not a class) with
-  static `open(joiner)` factory methods. The Joiner determines
-  the completion policy (all succeed, first wins, etc.).
-- **Lifecycle**: open → fork → join → close (always in this order).
+- **Problem z niestrukturalną współbieżnością** (ExecutorService):
+    - Zadania mogą przeżyć zakres nadrzędny, który je utworzył.
+    - Jeśli jedno zadanie się nie powiedzie, zadania siostrzane dalej działają (wyciek zasobów).
+    - Ręczne anulowanie jest podatne na błędy i często pomijane.
+    - Zrzuty wątków nie pokazują relacji rodzic-dziecko.
+- **Analogia**: Structured concurrency jest dla współbieżności tym,
+  czym programowanie strukturalne (if/while) było dla goto. Tak jak
+  przestaliśmy używać goto i zyskaliśmy lokalne rozumowanie o przepływie
+  sterowania, structured concurrency pozwala nam lokalnie rozumować
+  o czasie życia współbieżnych operacji.
+- **Pochodzenie**: "Notes on structured concurrency, or: Go statement
+  considered harmful" (Nathaniel J. Smith, 2018). Pomysł został
+  przyjęty przez Kotlin (coroutineScope), Swift (TaskGroup) i teraz Javę.
+- **Oś czasu JEP**:
+    - JEP 428: Inkubator w Java 19
+    - JEP 437: Drugi inkubator w Java 20
+    - JEP 453: Preview w Java 21
+    - JEP 462: Preview w Java 22
+    - JEP 480: Preview w Java 23
+    - JEP 499: Preview w Java 24
+    - JEP 505: Preview w Java 25
+- **Kluczowy niezmiennik**: zadania potomne nie mogą przeżyć zakresu,
+  który je utworzył. Gdy blok try-with-resources zakresu się kończy,
+  wszystkie zadania potomne mają gwarancję zakończenia (lub anulowania).
+- **Bazuje na virtual threads** (patrz module02_java21): zakresy tworzą
+  virtual threads dla każdego rozwidlonego zadania. Połączenie tanich
+  wątków + ograniczonego czasu życia zakresu stanowi fundament.
+- **`StructuredTaskScope`** to interfejs (nie klasa) ze statycznymi
+  metodami fabrycznymi `open(joiner)`. Joiner określa politykę
+  zakończenia (wszystkie muszą się udać, pierwszy wygrywa, itp.).
+- **Cykl życia**: open → fork → join → close (zawsze w tej kolejności).
 */
 
 // ============================================================
-// Section 2: Joiner Strategies -- allSuccessfulOrThrow and anySuccessfulResultOrThrow
+// Sekcja 2: Strategie Joiner -- allSuccessfulOrThrow i anySuccessfulResultOrThrow
 // ============================================================
 
 /*
-## Joiner Strategies -- allSuccessfulOrThrow and anySuccessfulResultOrThrow
+## Strategie Joiner -- allSuccessfulOrThrow i anySuccessfulResultOrThrow
 
-- `StructuredTaskScope<T, R>` is parameterized by a Joiner:
-    - T = the common type of forked subtasks
-    - R = the result type returned by `join()`
+- `StructuredTaskScope<T, R>` jest parametryzowany przez Joiner:
+    - T = wspólny typ rozwidlonych podzadań
+    - R = typ wyniku zwracany przez `join()`
 - **`Joiner.allSuccessfulOrThrow()`**:
-    - Waits for ALL subtasks to complete successfully.
-    - `join()` returns `Stream<Subtask<T>>` containing results.
-    - If ANY subtask fails → scope shuts down, remaining tasks
-      are cancelled, `join()` throws `FailedException`.
-    - Replaces the old `ShutdownOnFailure` pattern.
+    - Czeka na zakończenie WSZYSTKICH podzadań z powodzeniem.
+    - `join()` zwraca `Stream<Subtask<T>>` zawierający wyniki.
+    - Jeśli JAKIEKOLWIEK podzadanie się nie powiedzie → zakres się zamyka,
+      pozostałe zadania są anulowane, `join()` rzuca `FailedException`.
+    - Zastępuje stary wzorzec `ShutdownOnFailure`.
 - **`Joiner.anySuccessfulResultOrThrow()`**:
-    - Returns the FIRST successful result `T` from `join()`.
-    - Remaining tasks are cancelled immediately.
-    - If ALL tasks fail → `join()` throws `FailedException`.
-    - Replaces the old `ShutdownOnSuccess` pattern.
-- **`Subtask<T>`** has three states:
-    - SUCCESS → `get()` returns the result
-    - FAILED → `exception()` returns the throwable
-    - UNAVAILABLE → task was cancelled or not yet complete
-- **`FailedException`** is an unchecked RuntimeException that
-  wraps the first subtask failure as its cause. Additional
-  failures may appear as suppressed exceptions.
+    - Zwraca PIERWSZY udany wynik `T` z `join()`.
+    - Pozostałe zadania są natychmiast anulowane.
+    - Jeśli WSZYSTKIE zadania się nie powiodą → `join()` rzuca `FailedException`.
+    - Zastępuje stary wzorzec `ShutdownOnSuccess`.
+- **`Subtask<T>`** ma trzy stany:
+    - SUCCESS → `get()` zwraca wynik
+    - FAILED → `exception()` zwraca wyjątek
+    - UNAVAILABLE → zadanie zostało anulowane lub jeszcze się nie zakończyło
+- **`FailedException`** to niechecked RuntimeException, który
+  opakowuje pierwszą awarię podzadania jako swoją przyczynę. Dodatkowe
+  awarie mogą pojawić się jako wyjątki stłumione.
 */
 
 // ============================================================
-// Section 3: Joiner Strategies -- awaitAll and allUntil
+// Sekcja 3: Strategie Joiner -- awaitAll i allUntil
 // ============================================================
 
 /*
-## Joiner Strategies -- awaitAll and allUntil
+## Strategie Joiner -- awaitAll i allUntil
 
 - **`Joiner.awaitAllSuccessfulOrThrow()`**:
-    - Waits for all subtasks, returns Void.
-    - On success → inspect Subtask references from `fork()`.
-    - Any failure → `FailedException` (like allSuccessfulOrThrow
-      but you keep references to individual Subtasks).
+    - Czeka na wszystkie podzadania, zwraca Void.
+    - Po sukcesie → sprawdź referencje Subtask z `fork()`.
+    - Jakakolwiek awaria → `FailedException` (jak allSuccessfulOrThrow,
+      ale zachowujesz referencje do poszczególnych Subtask).
 - **`Joiner.awaitAll()`**:
-    - Most lenient joiner — waits for ALL subtasks regardless
-      of success or failure. Never throws on subtask failure.
-    - `join()` returns Void. Caller inspects Subtask states
-      manually via `state()`, `get()`, `exception()`.
-    - Use when partial failure is acceptable.
+    - Najbardziej łagodny joiner — czeka na WSZYSTKIE podzadania
+      niezależnie od sukcesu czy awarii. Nigdy nie rzuca przy awarii podzadania.
+    - `join()` zwraca Void. Wywołujący sprawdza stany Subtask
+      ręcznie przez `state()`, `get()`, `exception()`.
+    - Używaj, gdy częściowa awaria jest akceptowalna.
 - **`Joiner.allUntil(Predicate)`**:
-    - Waits until the predicate returns true for any completed
-      Subtask, then shuts down remaining tasks.
-    - `join()` returns `Stream<Subtask<T>>`.
-    - Enables custom short-circuit logic.
-- **Joiner selection guide**:
-    - All-or-nothing → `allSuccessfulOrThrow()`
-    - First wins / racing → `anySuccessfulResultOrThrow()`
-    - Need individual subtask refs → `awaitAllSuccessfulOrThrow()`
-    - Partial failures OK → `awaitAll()`
-    - Custom stop condition → `allUntil(Predicate)`
+    - Czeka, aż predykat zwróci true dla jakiegokolwiek ukończonego
+      Subtask, następnie zamyka pozostałe zadania.
+    - `join()` zwraca `Stream<Subtask<T>>`.
+    - Umożliwia własną logikę krótkiego spięcia.
+- **Przewodnik wyboru Joiner**:
+    - Wszystko albo nic → `allSuccessfulOrThrow()`
+    - Pierwszy wygrywa / wyścig → `anySuccessfulResultOrThrow()`
+    - Potrzebne referencje do poszczególnych podzadań → `awaitAllSuccessfulOrThrow()`
+    - Częściowe awarie OK → `awaitAll()`
+    - Własny warunek zatrzymania → `allUntil(Predicate)`
 */
 
 // ============================================================
-// Section 4: Configuration, Timeouts, and Exception Handling
+// Sekcja 4: Konfiguracja, limity czasowe i obsługa wyjątków
 // ============================================================
 
 /*
-## Configuration, Timeouts, and Exception Handling
+## Konfiguracja, limity czasowe i obsługa wyjątków
 
-- **Configuration** is supplied as a second parameter to `open()`:
-    - `withName(String)` — names the scope, visible in thread
-      dumps for diagnostics.
-    - `withTimeout(Duration)` — sets a deadline for the scope.
-    - `withThreadFactory(ThreadFactory)` — customize thread
-      creation (e.g., named virtual threads).
-- **Timeout**: If the deadline expires before `join()` completes,
-  `join()` throws `StructuredTaskScope.TimeoutException` (a
-  nested class, NOT java.util.concurrent.TimeoutException).
-  The scope shuts down and remaining tasks are cancelled.
-- **FailedException** wraps the first subtask failure as its
-  cause. Use `getCause()` to inspect the original exception.
-  Additional failures may be suppressed.
-- **Lifecycle rules** (violating these throws IllegalStateException):
-    - `close()` before `join()` → error
-    - `fork()` after `join()` → error
-    - `fork()` after scope is cancelled → error
-- **`isCancelled()`** — returns true if the scope was shut
-  down (e.g., due to timeout or a joiner policy decision).
+- **Konfiguracja** jest przekazywana jako drugi parametr do `open()`:
+    - `withName(String)` — nazywa zakres, widoczna w zrzutach
+      wątków do celów diagnostycznych.
+    - `withTimeout(Duration)` — ustawia termin dla zakresu.
+    - `withThreadFactory(ThreadFactory)` — dostosowanie tworzenia
+      wątków (np. nazwane virtual threads).
+- **Limit czasowy**: Jeśli termin upłynie przed zakończeniem `join()`,
+  `join()` rzuca `StructuredTaskScope.TimeoutException` (klasa
+  zagnieżdżona, NIE java.util.concurrent.TimeoutException).
+  Zakres się zamyka i pozostałe zadania są anulowane.
+- **FailedException** opakowuje pierwszą awarię podzadania jako swoją
+  przyczynę. Użyj `getCause()` do zbadania oryginalnego wyjątku.
+  Dodatkowe awarie mogą być stłumione.
+- **Reguły cyklu życia** (naruszenie tych reguł rzuca IllegalStateException):
+    - `close()` przed `join()` → błąd
+    - `fork()` po `join()` → błąd
+    - `fork()` po anulowaniu zakresu → błąd
+- **`isCancelled()`** — zwraca true jeśli zakres został zamknięty
+  (np. z powodu limitu czasowego lub decyzji polityki joinera).
 */
 
 // ============================================================
-// Section 5: Practical Patterns and Comparison
+// Sekcja 5: Praktyczne wzorce i porównanie
 // ============================================================
 
 /*
-## Practical Patterns and Comparison
+## Praktyczne wzorce i porównanie
 
 - **Structured concurrency vs ExecutorService**:
-    - Scope-bounded lifetime (tasks can't escape)
-    - Automatic cancellation on failure
-    - Thread dump observability (parent-child hierarchy)
-    - Virtual threads by default (no pool sizing)
-- **Fan-out pattern**: fork N tasks from a collection, collect
-  all results via allSuccessfulOrThrow stream.
-- **Nested scopes**: An inner scope inside a forked task. Errors
-  in inner scopes propagate up to the outer scope naturally.
-- **ScopedValue integration** (preview): Context values bound
-  in the parent thread are automatically inherited by forked
-  tasks via ScopedValue, enabling safe context propagation
-  without ThreadLocal.
-- **Best practices**:
-    - Always use try-with-resources for scopes
-    - Prefer the most restrictive joiner that fits your use case
-    - Keep forked tasks I/O-bound (structured concurrency shines
-      with blocking operations on virtual threads)
-    - Use withTimeout to prevent indefinite blocking
-    - Use withName for debuggability
+    - Czas życia ograniczony zakresem (zadania nie mogą uciec)
+    - Automatyczne anulowanie przy awarii
+    - Obserwowalność zrzutów wątków (hierarchia rodzic-dziecko)
+    - Virtual threads domyślnie (bez wymiarowania puli)
+- **Wzorzec fan-out**: rozwidl N zadań z kolekcji, zbierz
+  wszystkie wyniki przez strumień allSuccessfulOrThrow.
+- **Zagnieżdżone zakresy**: Wewnętrzny zakres w rozwidlonym zadaniu.
+  Błędy w wewnętrznych zakresach propagują się naturalnie do zakresu zewnętrznego.
+- **Integracja z ScopedValue** (preview): Wartości kontekstu związane
+  w wątku nadrzędnym są automatycznie dziedziczone przez rozwidlone
+  zadania przez ScopedValue, umożliwiając bezpieczną propagację
+  kontekstu bez ThreadLocal.
+- **Najlepsze praktyki**:
+    - Zawsze używaj try-with-resources dla zakresów
+    - Preferuj najbardziej restrykcyjny joiner pasujący do przypadku użycia
+    - Utrzymuj rozwidlone zadania jako I/O-bound (structured concurrency
+      błyszczy przy operacjach blokujących na virtual threads)
+    - Używaj withTimeout aby zapobiec nieskończonemu blokowaniu
+    - Używaj withName dla łatwości debugowania
 */
 
 public class StructuredConcurrency {
 
-    // ---- Inner types ----
+    // ---- Typy wewnętrzne ----
 
     record User(long id, String name, String email) {}
     record Order(long id, long userId, String product, double price) {}
@@ -176,7 +175,7 @@ public class StructuredConcurrency {
     record WeatherData(String city, double temperature, String condition) {}
     record SearchResult(String source, List<String> results) {}
 
-    // ---- Helper methods (simulate I/O) ----
+    // ---- Metody pomocnicze (symulacja I/O) ----
 
     static User simulateFetchUser(long id) throws InterruptedException {
         Thread.sleep(100);
@@ -216,20 +215,20 @@ public class StructuredConcurrency {
     }
 
     // ============================================================
-    // Section 1: Introduction -- Why Structured Concurrency
+    // Sekcja 1: Wprowadzenie -- Dlaczego structured concurrency
     // ============================================================
 
     static void introductionToStructuredConcurrency() throws Exception {
         System.out.println("=== Section 1: Introduction -- Why Structured Concurrency ===");
 
-        // ---- Demo 1: Unstructured approach (ExecutorService + Futures) ----
+        // ---- Demo 1: Podejście niestrukturalne (ExecutorService + Futures) ----
         System.out.println("\n--- Demo 1: Unstructured approach (ExecutorService) ---");
         try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
             var userFuture = executor.submit(() -> simulateFetchUser(1));
             var ordersFuture = executor.submit(() -> simulateFetchOrders(1));
             var reviewsFuture = executor.submit(() -> simulateFetchReviews(1));
 
-            // Must manually handle each future — no automatic cancellation
+            // Trzeba ręcznie obsłużyć każdy future — brak automatycznego anulowania
             try {
                 var user = userFuture.get();
                 var orders = ordersFuture.get();
@@ -239,7 +238,7 @@ public class StructuredConcurrency {
                 System.out.println("  Orders: " + profile.orders().size());
                 System.out.println("  Reviews: " + profile.reviews().size());
             } catch (ExecutionException e) {
-                // If one fails, others keep running — must cancel manually
+                // Jeśli jedno się nie powiedzie, inne dalej działają — trzeba anulować ręcznie
                 userFuture.cancel(true);
                 ordersFuture.cancel(true);
                 reviewsFuture.cancel(true);
@@ -248,18 +247,18 @@ public class StructuredConcurrency {
         }
         System.out.println("  Problem: if one task fails, siblings continue running unless manually cancelled");
 
-        // ---- Demo 2: Structured approach ----
+        // ---- Demo 2: Podejście strukturalne ----
         System.out.println("\n--- Demo 2: Structured approach (StructuredTaskScope) ---");
         try (var scope = StructuredTaskScope.open(Joiner.allSuccessfulOrThrow())) {
-            // Fork tasks — each runs in its own virtual thread
+            // Rozwidlenie zadań — każde działa we własnym virtual thread
             var userTask = scope.fork(() -> simulateFetchUser(1));
             var ordersTask = scope.fork(() -> simulateFetchOrders(1));
             var reviewsTask = scope.fork(() -> simulateFetchReviews(1));
 
-            // Join waits for all tasks; if any fails, others are cancelled automatically
+            // Join czeka na wszystkie zadania; jeśli którekolwiek się nie powiedzie, inne są anulowane automatycznie
             var subtasks = scope.join();
 
-            // Build result from completed subtasks
+            // Budowanie wyniku z ukończonych podzadań
             var results = subtasks.toList();
             System.out.println("  Completed " + results.size() + " subtasks");
             System.out.println("  User: " + userTask.get());
@@ -268,14 +267,14 @@ public class StructuredConcurrency {
         }
         System.out.println("  Benefit: automatic cancellation, scope-bounded lifetime, clean code");
 
-        // ---- Demo 3: Lifetime guarantee — timeout cancels tasks ----
+        // ---- Demo 3: Gwarancja czasu życia — limit czasowy anuluje zadania ----
         System.out.println("\n--- Demo 3: Lifetime guarantee (timeout cancels tasks) ---");
         try (var scope = StructuredTaskScope.open(
                 Joiner.allSuccessfulOrThrow(),
                 cf -> cf.withTimeout(Duration.ofMillis(500)))) {
 
-            scope.fork(() -> simulateSlowOperation(3000)); // 3 seconds — will be cancelled
-            scope.fork(() -> simulateSlowOperation(100));   // 100ms — fast enough
+            scope.fork(() -> simulateSlowOperation(3000)); // 3 sekundy — zostanie anulowane
+            scope.fork(() -> simulateSlowOperation(100));   // 100ms — wystarczająco szybkie
 
             scope.join();
             System.out.println("  Should not reach here");
@@ -286,13 +285,13 @@ public class StructuredConcurrency {
     }
 
     // ============================================================
-    // Section 2: Joiner Strategies -- allSuccessfulOrThrow and anySuccessfulResultOrThrow
+    // Sekcja 2: Strategie Joiner -- allSuccessfulOrThrow i anySuccessfulResultOrThrow
     // ============================================================
 
     static void joinerAllAndAny() throws Exception {
         System.out.println("\n=== Section 2: Joiner Strategies -- allSuccessfulOrThrow and anySuccessfulResultOrThrow ===");
 
-        // ---- Demo 1: allSuccessfulOrThrow — happy path ----
+        // ---- Demo 1: allSuccessfulOrThrow — szczęśliwa ścieżka ----
         System.out.println("\n--- Demo 1: allSuccessfulOrThrow -- happy path ---");
         try (var scope = StructuredTaskScope.open(Joiner.<Object>allSuccessfulOrThrow())) {
             var userTask = scope.fork(() -> simulateFetchUser(42));
@@ -302,7 +301,7 @@ public class StructuredConcurrency {
             var subtasks = scope.join().toList();
             System.out.println("  join() returned " + subtasks.size() + " subtasks");
 
-            // Build UserProfile from individual subtask results
+            // Budowanie UserProfile z wyników poszczególnych podzadań
             var profile = new UserProfile(
                     userTask.get(),
                     ordersTask.get(),
@@ -313,7 +312,7 @@ public class StructuredConcurrency {
                     + ", " + profile.reviews().size() + " reviews");
         }
 
-        // ---- Demo 2: allSuccessfulOrThrow — failure ----
+        // ---- Demo 2: allSuccessfulOrThrow — awaria ----
         System.out.println("\n--- Demo 2: allSuccessfulOrThrow -- failure ---");
         try (var scope = StructuredTaskScope.open(Joiner.<Object>allSuccessfulOrThrow())) {
             var goodTask = scope.fork(() -> simulateFetchUser(1));
@@ -328,7 +327,7 @@ public class StructuredConcurrency {
             System.out.println("  FailedException is a RuntimeException: " + (e instanceof RuntimeException));
         }
 
-        // ---- Demo 3: anySuccessfulResultOrThrow — racing ----
+        // ---- Demo 3: anySuccessfulResultOrThrow — wyścig ----
         System.out.println("\n--- Demo 3: anySuccessfulResultOrThrow -- racing mirrors ---");
         try (var scope = StructuredTaskScope.open(Joiner.<String>anySuccessfulResultOrThrow())) {
             scope.fork(() -> { Thread.sleep(200); return "Mirror-A (200ms)"; });
@@ -340,7 +339,7 @@ public class StructuredConcurrency {
             System.out.println("  Other tasks were cancelled automatically");
         }
 
-        // ---- Demo 4: anySuccessfulResultOrThrow — all fail ----
+        // ---- Demo 4: anySuccessfulResultOrThrow — wszystkie się nie powiodły ----
         System.out.println("\n--- Demo 4: anySuccessfulResultOrThrow -- all fail ---");
         try (var scope = StructuredTaskScope.open(Joiner.<String>anySuccessfulResultOrThrow())) {
             scope.fork(() -> { throw new RuntimeException("Error from source A"); });
@@ -360,13 +359,13 @@ public class StructuredConcurrency {
     }
 
     // ============================================================
-    // Section 3: Joiner Strategies -- awaitAll and allUntil
+    // Sekcja 3: Strategie Joiner -- awaitAll i allUntil
     // ============================================================
 
     static void joinerAwaitAllAndAllUntil() throws Exception {
         System.out.println("\n=== Section 3: Joiner Strategies -- awaitAll and allUntil ===");
 
-        // ---- Demo 1: awaitAll — partial failure tolerance ----
+        // ---- Demo 1: awaitAll — tolerancja częściowych awarii ----
         System.out.println("\n--- Demo 1: awaitAll -- partial failure tolerance ---");
         try (var scope = StructuredTaskScope.open(Joiner.<String>awaitAll())) {
             var tasks = new ArrayList<Subtask<String>>();
@@ -376,7 +375,7 @@ public class StructuredConcurrency {
             tasks.add(scope.fork(() -> { Thread.sleep(120); throw new RuntimeException("Task-4: Timeout"); }));
             tasks.add(scope.fork(() -> { Thread.sleep(60);  return "Task-5: OK"; }));
 
-            scope.join(); // Does NOT throw even though some tasks failed
+            scope.join(); // NIE rzuca nawet jeśli niektóre zadania się nie powiodły
 
             System.out.println("  join() completed without throwing (awaitAll is lenient)");
             var successes = tasks.stream().filter(t -> t.state() == Subtask.State.SUCCESS).toList();
@@ -392,7 +391,7 @@ public class StructuredConcurrency {
             }
         }
 
-        // ---- Demo 2: awaitAll — resilient search ----
+        // ---- Demo 2: awaitAll — odporne wyszukiwanie ----
         System.out.println("\n--- Demo 2: awaitAll -- resilient search ---");
         try (var scope = StructuredTaskScope.open(Joiner.<SearchResult>awaitAll())) {
             var tasks = new ArrayList<Subtask<SearchResult>>();
@@ -430,7 +429,7 @@ public class StructuredConcurrency {
             System.out.println("  Merged results: " + merged);
         }
 
-        // ---- Demo 3: allUntil — custom short-circuit ----
+        // ---- Demo 3: allUntil — własne krótkie spięcie ----
         System.out.println("\n--- Demo 3: allUntil -- custom short-circuit ---");
         try (var scope = StructuredTaskScope.open(
                 Joiner.<Integer>allUntil(subtask ->
@@ -438,9 +437,9 @@ public class StructuredConcurrency {
 
             scope.fork(() -> { Thread.sleep(50);  return 10; });
             scope.fork(() -> { Thread.sleep(100); return 25; });
-            scope.fork(() -> { Thread.sleep(150); return 75; }); // This one triggers the predicate
-            scope.fork(() -> { Thread.sleep(200); return 30; }); // Should be cancelled
-            scope.fork(() -> { Thread.sleep(250); return 90; }); // Should be cancelled
+            scope.fork(() -> { Thread.sleep(150); return 75; }); // To wyzwala predykat
+            scope.fork(() -> { Thread.sleep(200); return 30; }); // Powinno zostać anulowane
+            scope.fork(() -> { Thread.sleep(250); return 90; }); // Powinno zostać anulowane
 
             var subtasks = scope.join().toList();
             System.out.println("  Completed subtasks: " + subtasks.size());
@@ -453,19 +452,19 @@ public class StructuredConcurrency {
     }
 
     // ============================================================
-    // Section 4: Configuration, Timeouts, and Exception Handling
+    // Sekcja 4: Konfiguracja, limity czasowe i obsługa wyjątków
     // ============================================================
 
     static void configurationTimeoutsAndExceptions() throws Exception {
         System.out.println("\n=== Section 4: Configuration, Timeouts, and Exception Handling ===");
 
-        // ---- Demo 1: Named scope + timeout ----
+        // ---- Demo 1: Nazwany zakres + limit czasowy ----
         System.out.println("\n--- Demo 1: Named scope + timeout ---");
         try (var scope = StructuredTaskScope.open(
                 Joiner.<String>allSuccessfulOrThrow(),
                 cf -> cf.withName("fetch-scope").withTimeout(Duration.ofMillis(500)))) {
 
-            scope.fork(() -> simulateSlowOperation(2000)); // Will exceed timeout
+            scope.fork(() -> simulateSlowOperation(2000)); // Przekroczy limit czasowy
             scope.fork(() -> { Thread.sleep(100); return "Fast task done"; });
 
             scope.join();
@@ -476,11 +475,11 @@ public class StructuredConcurrency {
             System.out.println("  Note: this is StructuredTaskScope.TimeoutException, not java.util.concurrent.TimeoutException");
         }
 
-        // ---- Demo 2: FailedException inspection ----
+        // ---- Demo 2: Inspekcja FailedException ----
         System.out.println("\n--- Demo 2: FailedException inspection ---");
         try (var scope = StructuredTaskScope.open(Joiner.<String>allSuccessfulOrThrow())) {
             scope.fork(() -> {
-                // Simulate a checked exception wrapped in the callable
+                // Symulacja wyjątku sprawdzanego opakowanego w callable
                 throw new Exception("Database connection refused");
             });
             scope.fork(() -> { Thread.sleep(100); return "Other task"; });
@@ -494,23 +493,23 @@ public class StructuredConcurrency {
             System.out.println("  Cause message: " + e.getCause().getMessage());
         }
 
-        // ---- Demo 3: Scope lifecycle rules ----
+        // ---- Demo 3: Reguły cyklu życia zakresu ----
         System.out.println("\n--- Demo 3: Scope lifecycle rules ---");
         System.out.println("  Correct order: open -> fork -> join -> close");
 
-        // Demonstrate fork after join throws IllegalStateException
+        // Demonstracja, że fork po join rzuca IllegalStateException
         try (var scope = StructuredTaskScope.open(Joiner.<String>awaitAll())) {
             scope.fork(() -> "first task");
             scope.join();
 
-            // Fork after join should throw
+            // Fork po join powinien rzucić wyjątek
             scope.fork(() -> "too late");
             System.out.println("  Should not reach here");
         } catch (IllegalStateException e) {
             System.out.println("  fork() after join() -> IllegalStateException: " + e.getMessage());
         }
 
-        // Demonstrate isCancelled
+        // Demonstracja isCancelled
         System.out.println("\n  Checking isCancelled() after timeout:");
         try (var scope = StructuredTaskScope.open(
                 Joiner.<String>allSuccessfulOrThrow(),
@@ -524,13 +523,13 @@ public class StructuredConcurrency {
     }
 
     // ============================================================
-    // Section 5: Practical Patterns and Comparison
+    // Sekcja 5: Praktyczne wzorce i porównanie
     // ============================================================
 
     static void practicalPatternsAndComparison() throws Exception {
         System.out.println("\n=== Section 5: Practical Patterns and Comparison ===");
 
-        // ---- Demo 1: Fan-out with dynamic count ----
+        // ---- Demo 1: Fan-out z dynamiczną liczbą ----
         System.out.println("\n--- Demo 1: Fan-out -- weather for multiple cities ---");
         var cities = List.of("London", "Paris", "Tokyo", "New York", "Sydney");
 
@@ -550,12 +549,12 @@ public class StructuredConcurrency {
             }
         }
 
-        // ---- Demo 2: Nested scopes ----
+        // ---- Demo 2: Zagnieżdżone zakresy ----
         System.out.println("\n--- Demo 2: Nested scopes ---");
         try (var outerScope = StructuredTaskScope.open(Joiner.<String>allSuccessfulOrThrow())) {
 
             outerScope.fork(() -> {
-                // Inner scope for user data
+                // Wewnętrzny zakres dla danych użytkownika
                 try (var innerScope = StructuredTaskScope.open(Joiner.<String>allSuccessfulOrThrow())) {
                     innerScope.fork(() -> { Thread.sleep(50); return "user-name"; });
                     innerScope.fork(() -> { Thread.sleep(80); return "user-email"; });
@@ -565,7 +564,7 @@ public class StructuredConcurrency {
             });
 
             outerScope.fork(() -> {
-                // Inner scope for product data
+                // Wewnętrzny zakres dla danych produktu
                 try (var innerScope = StructuredTaskScope.open(Joiner.<String>allSuccessfulOrThrow())) {
                     innerScope.fork(() -> { Thread.sleep(60); return "product-name"; });
                     innerScope.fork(() -> { Thread.sleep(70); return "product-price"; });
@@ -582,7 +581,7 @@ public class StructuredConcurrency {
             System.out.println("  Inner scopes completed before outer scope — hierarchical completion");
         }
 
-        // ---- Demo 3: Best practices summary ----
+        // ---- Demo 3: Podsumowanie najlepszych praktyk ----
         System.out.println("\n--- Demo 3: Best practices summary ---");
         System.out.println("  1. Always use try-with-resources for StructuredTaskScope");
         System.out.println("  2. Prefer the most restrictive Joiner that fits your use case:");
@@ -598,7 +597,7 @@ public class StructuredConcurrency {
     }
 
     // ============================================================
-    // Main -- run all sections
+    // Main -- uruchomienie wszystkich sekcji
     // ============================================================
 
     public static void main(String[] args) throws Exception {

@@ -4,201 +4,201 @@ import java.util.*;
 import java.util.stream.*;
 
 // ============================================================
-// Section 1: Introduction to Sealed Classes — Why Restrict Inheritance?
+// Sekcja 1: Wprowadzenie do klas sealed — Dlaczego ograniczać dziedziczenie?
 // ============================================================
 
 /*
-## Introduction to Sealed Classes — Why Restrict Inheritance?
+## Wprowadzenie do klas sealed — Dlaczego ograniczać dziedziczenie?
 
-- In standard Java, any class that is not `final` can be extended
-  by **anyone**, anywhere. This creates **open hierarchies** where
-  the author has no control over which subtypes exist.
-- **Problems with open hierarchies**:
-    - You cannot write exhaustive `switch` or `if-else` chains
-      because an unknown subclass might appear at runtime.
-    - Library maintainers cannot evolve a class hierarchy safely —
-      any change might break unknown subclasses in user code.
-    - Domain modeling is imprecise: if a Shape should only be
-      Circle, Rectangle, or Triangle, nothing enforces that rule.
-- **Pre-Java 17 workarounds** (all unsatisfying):
-    - `final` — prevents ALL extension, too restrictive
-    - Package-private constructors — limits extension to the same
-      package, but allows any class in that package
-    - Javadoc comments like "do not extend" — unenforceable
-    - Enums — limited to singletons (no per-instance data)
-- **Sealed classes/interfaces** (JEP 409, Java 17) solve this:
-    - The `sealed` modifier + `permits` clause declares **exactly**
-      which classes/interfaces may extend or implement a type.
-    - The compiler enforces the restriction at compile time.
-    - Pattern matching can rely on the **closed set** of subtypes
-      to enable exhaustive switch expressions without `default`.
-- **Timeline**:
-    - JEP 360: Preview in Java 15
-    - JEP 397: Second preview in Java 16
-    - JEP 409: Finalized in Java 17
+- W standardowej Javie każda klasa, która nie jest `final`, może być
+  rozszerzona przez **kogokolwiek**, gdziekolwiek. To tworzy **otwarte
+  hierarchie**, gdzie autor nie ma kontroli nad tym, jakie podtypy istnieją.
+- **Problemy z otwartymi hierarchiami**:
+    - Nie można pisać wyczerpujących łańcuchów `switch` lub `if-else`,
+      ponieważ nieznana podklasa może pojawić się w czasie wykonania.
+    - Twórcy bibliotek nie mogą bezpiecznie ewoluować hierarchii klas —
+      każda zmiana może złamać nieznane podklasy w kodzie użytkownika.
+    - Modelowanie domeny jest nieprecyzyjne: jeśli Shape powinien być
+      tylko Circle, Rectangle lub Triangle, nic nie wymusza tej reguły.
+- **Obejścia sprzed Javy 17** (wszystkie niezadowalające):
+    - `final` — zapobiega WSZELKIEMU rozszerzaniu, zbyt restrykcyjne
+    - Konstruktory pakietowo-prywatne — ograniczają rozszerzanie do tego
+      samego pakietu, ale pozwalają na każdą klasę w tym pakiecie
+    - Komentarze Javadoc jak "nie rozszerzaj" — niewymuszone
+    - Enum — ograniczone do singletonów (brak danych per-instancja)
+- **Klasy/interfejsy sealed** (JEP 409, Java 17) rozwiązują to:
+    - Modyfikator `sealed` + klauzula `permits` deklaruje **dokładnie**
+      które klasy/interfejsy mogą rozszerzać lub implementować dany typ.
+    - Kompilator wymusza ograniczenie w czasie kompilacji.
+    - Dopasowywanie wzorców może polegać na **zamkniętym zbiorze**
+      podtypów, aby umożliwić wyczerpujące wyrażenia switch bez `default`.
+- **Harmonogram**:
+    - JEP 360: Podgląd w Javie 15
+    - JEP 397: Drugi podgląd w Javie 16
+    - JEP 409: Sfinalizowano w Javie 17
 */
 
 // ============================================================
-// Section 2: Syntax and Rules
+// Sekcja 2: Składnia i reguły
 // ============================================================
 
 /*
-## Syntax and Rules
+## Składnia i reguły
 
-- A sealed class or interface uses the `sealed` modifier and a
-  `permits` clause to list the allowed direct subtypes:
+- Klasa lub interfejs sealed używa modyfikatora `sealed` i klauzuli
+  `permits` do wylistowania dozwolonych bezpośrednich podtypów:
       sealed interface Shape permits Circle, Rectangle, Triangle
-- **Same-module rule**: All permitted subtypes must be in the
-  same module as the sealed type (or in the same package if in
-  the unnamed module). This is enforced by the compiler.
-- **Three required modifiers** — every direct subtype of a sealed
-  type must be declared as one of:
-    - `final` — cannot be extended further (hierarchy ends here)
-    - `sealed` — continues the sealed chain with its own `permits`
-    - `non-sealed` — reopens the hierarchy, any class can extend
-  This is mandatory — the compiler will reject a subtype that
-  doesn't specify one of these three modifiers.
-- **When to use each**:
-    - `final` — most common; leaf nodes of the hierarchy
-    - `sealed` — when you want another level of controlled subtypes
-    - `non-sealed` — when you intentionally allow open extension
-      at a specific point (useful for plugin/extension points)
-- **Records** as permitted subtypes are implicitly `final` (all
-  records are final), so they work perfectly as leaf nodes.
-- **Enums** as permitted subtypes are implicitly `final` as well.
-- **Reflection API**:
-    - `Class.isSealed()` — returns true if the class is sealed
-    - `Class.getPermittedSubclasses()` — returns the permitted
-      subtypes as an array of `ClassDesc`
+- **Reguła tego samego modułu**: Wszystkie dozwolone podtypy muszą
+  być w tym samym module co typ sealed (lub w tym samym pakiecie
+  jeśli w nienazwanym module). Jest to wymuszane przez kompilator.
+- **Trzy wymagane modyfikatory** — każdy bezpośredni podtyp typu
+  sealed musi być zadeklarowany jako jeden z:
+    - `final` — nie może być dalej rozszerzany (hierarchia kończy się tutaj)
+    - `sealed` — kontynuuje łańcuch sealed z własną klauzulą `permits`
+    - `non-sealed` — ponownie otwiera hierarchię, każda klasa może rozszerzać
+  Jest to obowiązkowe — kompilator odrzuci podtyp, który nie
+  określa jednego z tych trzech modyfikatorów.
+- **Kiedy używać każdego**:
+    - `final` — najczęstszy; węzły liściowe hierarchii
+    - `sealed` — gdy chcesz kolejny poziom kontrolowanych podtypów
+    - `non-sealed` — gdy celowo pozwalasz na otwarte rozszerzanie
+      w konkretnym punkcie (przydatne dla punktów wtyczek/rozszerzeń)
+- **Record** jako dozwolone podtypy są niejawnie `final` (wszystkie
+  record są final), więc doskonale działają jako węzły liściowe.
+- **Enum** jako dozwolone podtypy są również niejawnie `final`.
+- **API refleksji**:
+    - `Class.isSealed()` — zwraca true jeśli klasa jest sealed
+    - `Class.getPermittedSubclasses()` — zwraca dozwolone
+      podtypy jako tablicę `ClassDesc`
 */
 
 // ============================================================
-// Section 3: Sealed Interfaces
+// Sekcja 3: Interfejsy sealed
 // ============================================================
 
 /*
-## Sealed Interfaces
+## Interfejsy sealed
 
-- Sealed interfaces work exactly like sealed classes — you can
-  declare `sealed interface X permits A, B, C` and only A, B, C
-  may implement X.
-- **Records implementing sealed interfaces**: Records are an ideal
-  match for sealed interfaces because:
-    - Records are implicitly `final` (satisfying the modifier rule)
-    - Records are transparent data carriers — perfect for modeling
-      algebraic data types (sum types)
-    - Combining sealed interfaces + records gives you **sum types**
-      (sealed = "one of these options") of **product types**
-      (record = tuple of named fields)
-- **Enums implementing sealed interfaces**: An enum can implement
-  a sealed interface. Since enums are implicitly `final` and have
-  a fixed set of instances, they naturally fit the sealed concept.
-- **Algebraic Data Types (ADTs)**: In functional programming,
-  ADTs are a fundamental modeling tool:
-    - **Sum type** = "A or B or C" (sealed interface)
-    - **Product type** = "A and B and C" (record/class with fields)
-    - Java's sealed interfaces + records give us full ADT support.
-  This pattern is called "sealed interface + records" or
-  "discriminated unions" in other languages.
+- Interfejsy sealed działają dokładnie jak klasy sealed — możesz
+  zadeklarować `sealed interface X permits A, B, C` i tylko A, B, C
+  mogą implementować X.
+- **Record implementujące interfejsy sealed**: Record są idealnym
+  dopasowaniem do interfejsów sealed, ponieważ:
+    - Record są niejawnie `final` (spełniając regułę modyfikatora)
+    - Record są transparentnymi nośnikami danych — idealne do
+      modelowania algebraicznych typów danych (typów sumy)
+    - Połączenie interfejsów sealed + record daje **typy sumy**
+      (sealed = "jedna z tych opcji") **typów iloczynu**
+      (record = krotka nazwanych pól)
+- **Enum implementujące interfejsy sealed**: Enum może implementować
+  interfejs sealed. Ponieważ enum są niejawnie `final` i mają
+  stały zbiór instancji, naturalnie pasują do koncepcji sealed.
+- **Algebraiczne typy danych (ADT)**: W programowaniu funkcyjnym
+  ADT są fundamentalnym narzędziem modelowania:
+    - **Typ sumy** = "A lub B lub C" (interfejs sealed)
+    - **Typ iloczynu** = "A i B i C" (record/klasa z polami)
+    - Interfejsy sealed + record w Javie dają nam pełne wsparcie ADT.
+  Ten wzorzec nazywa się "interfejs sealed + record" lub
+  "unie dyskryminowane" w innych językach.
 */
 
 // ============================================================
-// Section 4: Sealed Classes and Pattern Matching
+// Sekcja 4: Klasy sealed i dopasowywanie wzorców
 // ============================================================
 
 /*
-## Sealed Classes and Pattern Matching
+## Klasy sealed i dopasowywanie wzorców
 
-- The real power of sealed types emerges with **pattern matching
-  in switch expressions** (JEP 441, finalized Java 21).
-- Because the compiler knows the **complete set** of permitted
-  subtypes, it can verify that a switch expression is
-  **exhaustive** — covering all possible cases.
-- **No `default` needed**: When all permitted subtypes are handled,
-  the compiler accepts the switch without a default branch. This
-  is a significant advantage because:
-    - Adding a new subtype triggers compile errors in every switch
-      that doesn't handle it — you can't forget to update them.
-    - With `default`, new subtypes silently fall through.
-- **Guarded patterns with `when`**: You can add conditions to
-  patterns: `case Circle c when c.radius() > 100 -> ...`
-  This combines type checking, deconstruction, and filtering
-  in a single, readable expression.
-- **Connection to JEP 441**: Pattern matching for switch was
-  previewed starting in Java 17 and finalized in Java 21.
-  Sealed classes were designed with this synergy in mind.
+- Prawdziwa moc typów sealed ujawnia się przy **dopasowywaniu wzorców
+  w wyrażeniach switch** (JEP 441, sfinalizowane w Javie 21).
+- Ponieważ kompilator zna **kompletny zbiór** dozwolonych
+  podtypów, może zweryfikować, że wyrażenie switch jest
+  **wyczerpujące** — pokrywające wszystkie możliwe przypadki.
+- **Nie potrzeba `default`**: Gdy wszystkie dozwolone podtypy są
+  obsłużone, kompilator akceptuje switch bez gałęzi default. To
+  jest istotna zaleta, ponieważ:
+    - Dodanie nowego podtypu wyzwala błędy kompilacji w każdym
+      switch, który go nie obsługuje — nie można zapomnieć o aktualizacji.
+    - Z `default` nowe podtypy cicho przechodzą dalej.
+- **Wzorce ze strażnikami `when`**: Możesz dodać warunki do
+  wzorców: `case Circle c when c.radius() > 100 -> ...`
+  To łączy sprawdzanie typu, dekonstrukcję i filtrowanie
+  w jednym, czytelnym wyrażeniu.
+- **Powiązanie z JEP 441**: Dopasowywanie wzorców dla switch było
+  w podglądzie od Javy 17 i sfinalizowane w Javie 21.
+  Klasy sealed zostały zaprojektowane z myślą o tej synergii.
 */
 
 // ============================================================
-// Section 5: Sealed Classes with Records — Algebraic Data Types
+// Sekcja 5: Klasy sealed z Record — Algebraiczne typy danych
 // ============================================================
 
 /*
-## Sealed Classes with Records — Algebraic Data Types
+## Klasy sealed z Record — Algebraiczne typy danych
 
-- **Algebraic Data Types (ADTs)** are the combination of:
-    - **Sum types** (tagged unions): "one of A, B, or C"
-    - **Product types** (tuples/records): "A contains x, y, z"
-- In languages like Haskell, Scala, Kotlin, and Rust, ADTs are
-  a core feature:
+- **Algebraiczne typy danych (ADT)** to połączenie:
+    - **Typów sumy** (unie tagowane): "jeden z A, B lub C"
+    - **Typów iloczynu** (krotki/record): "A zawiera x, y, z"
+- W językach takich jak Haskell, Scala, Kotlin i Rust ADT są
+  podstawową cechą:
     - Haskell: `data Expr = Num Double | Add Expr Expr | Mul Expr Expr`
     - Scala 3: `enum Expr { case Num(v: Double); case Add(l: Expr, r: Expr) }`
     - Kotlin: `sealed class Expr { data class Num(val v: Double) : Expr() }`
-- Java's sealed interfaces + records achieve the same thing:
+- Interfejsy sealed + record w Javie osiągają to samo:
     - `sealed interface Expression permits Num, Add, Mul, Neg, Var`
-    - Each variant is a record with its own fields
-- **Expression trees / ASTs**: A classic ADT use case is modeling
-  arithmetic expressions as a tree structure. Each node is a
-  variant (Num, Add, Mul, Neg, Var), and recursive evaluation
-  or transformation is done via pattern matching on the sealed
-  interface.
-- **Benefits over visitor pattern**: Traditional Java would use
-  the Visitor pattern for operations on type hierarchies. Sealed
-  types + pattern matching are more concise, more readable, and
-  don't require the boilerplate of accept/visit methods.
+    - Każdy wariant jest record z własnymi polami
+- **Drzewa wyrażeń / AST**: Klasyczny przypadek użycia ADT to
+  modelowanie wyrażeń arytmetycznych jako struktury drzewiastej.
+  Każdy węzeł jest wariantem (Num, Add, Mul, Neg, Var), a rekurencyjna
+  ewaluacja lub transformacja odbywa się przez dopasowywanie wzorców
+  na interfejsie sealed.
+- **Korzyści w porównaniu ze wzorcem visitor**: Tradycyjna Java
+  używałaby wzorca Visitor do operacji na hierarchiach typów. Typy
+  sealed + dopasowywanie wzorców są bardziej zwięzłe, bardziej
+  czytelne i nie wymagają szablonu metod accept/visit.
 */
 
 // ============================================================
-// Section 6: Practical Patterns and Design Guidelines
+// Sekcja 6: Wzorce praktyczne i wytyczne projektowe
 // ============================================================
 
 /*
-## Practical Patterns and Design Guidelines
+## Wzorce praktyczne i wytyczne projektowe
 
-- **Sealed vs final vs open**:
-    - `final` — no extension at all (single concrete type)
-    - `sealed` — controlled extension (fixed set of subtypes)
-    - open (default) — anyone can extend (traditional Java)
-  Choose sealed when you need a **known, finite set** of variants.
-- **Sealed vs enums**:
-    - Enums — each variant is a **singleton** (no per-instance data)
-    - Sealed — each variant can carry **different data** (fields)
-    - Use enums for simple flags/categories, sealed for rich domain
-      types where each variant has its own shape.
-- **Domain modeling guidelines**:
-    - Model states as sealed interfaces: PaymentState, OrderStatus
-    - Model results as sealed interfaces: Result<T>, Validation<T>
-    - Model commands/events as sealed interfaces in CQRS/ES systems
-    - Each variant as a record = immutable, transparent, equals/hashCode for free
-- **`non-sealed` extension points**: Use non-sealed sparingly,
-  when one branch of the hierarchy should be open (e.g., a
-  plugin system where third parties provide implementations).
-- **State machines**: Sealed interfaces model finite state machines
-  naturally — each state is a variant, transitions are methods
-  that take one state and return another, and the compiler
-  ensures all states are handled.
+- **Sealed vs final vs otwarty**:
+    - `final` — żadnego rozszerzania (pojedynczy konkretny typ)
+    - `sealed` — kontrolowane rozszerzanie (stały zbiór podtypów)
+    - otwarty (domyślnie) — każdy może rozszerzać (tradycyjna Java)
+  Wybierz sealed gdy potrzebujesz **znanego, skończonego zbioru** wariantów.
+- **Sealed vs enum**:
+    - Enum — każdy wariant jest **singletonem** (brak danych per-instancja)
+    - Sealed — każdy wariant może przenosić **różne dane** (pola)
+    - Użyj enum dla prostych flag/kategorii, sealed dla bogatych
+      typów domenowych, gdzie każdy wariant ma swój kształt.
+- **Wytyczne modelowania domeny**:
+    - Modeluj stany jako interfejsy sealed: PaymentState, OrderStatus
+    - Modeluj wyniki jako interfejsy sealed: Result<T>, Validation<T>
+    - Modeluj polecenia/zdarzenia jako interfejsy sealed w systemach CQRS/ES
+    - Każdy wariant jako record = niemutowalny, transparentny, equals/hashCode za darmo
+- **Punkty rozszerzeń `non-sealed`**: Używaj non-sealed oszczędnie,
+  gdy jedna gałąź hierarchii powinna być otwarta (np. system
+  wtyczek, gdzie strony trzecie dostarczają implementacje).
+- **Maszyny stanów**: Interfejsy sealed modelują maszyny stanów
+  skończonych w naturalny sposób — każdy stan jest wariantem,
+  przejścia są metodami przyjmującymi jeden stan i zwracającymi
+  inny, a kompilator zapewnia, że wszystkie stany są obsłużone.
 */
 
 public class SealedClassesAndInterfaces {
 
-    // ---- Section 1: Shape hierarchy ----
+    // ---- Sekcja 1: Hierarchia Shape ----
 
     sealed interface Shape permits Circle, Rectangle, Triangle {}
     record Circle(double radius) implements Shape {}
     record Rectangle(double width, double height) implements Shape {}
     record Triangle(double a, double b, double c) implements Shape {}
 
-    // ---- Section 2: Vehicle hierarchy (three modifier types) ----
+    // ---- Sekcja 2: Hierarchia Vehicle (trzy typy modyfikatorów) ----
 
     static sealed abstract class Vehicle permits Car, Truck, Motorcycle {}
     static final class Car extends Vehicle {
@@ -220,7 +220,7 @@ public class SealedClassesAndInterfaces {
         @Override public String toString() { return "Motorcycle"; }
     }
 
-    // ---- Section 3: Sealed interfaces with generics, records, enums ----
+    // ---- Sekcja 3: Interfejsy sealed z generykami, record, enum ----
 
     sealed interface Result<T> permits Success, Failure {}
     record Success<T>(T value) implements Result<T> {}
@@ -229,7 +229,7 @@ public class SealedClassesAndInterfaces {
     sealed interface Loggable permits LogLevel {}
     enum LogLevel implements Loggable { DEBUG, INFO, WARN, ERROR }
 
-    // ---- Section 5: Expression tree (ADTs) ----
+    // ---- Sekcja 5: Drzewo wyrażeń (ADT) ----
 
     sealed interface Expression permits Num, Add, Mul, Neg, Var {}
     record Num(double value) implements Expression {}
@@ -238,7 +238,7 @@ public class SealedClassesAndInterfaces {
     record Neg(Expression expr) implements Expression {}
     record Var(String name) implements Expression {}
 
-    // ---- Section 6: Payment state machine + Validation ----
+    // ---- Sekcja 6: Maszyna stanów płatności + Walidacja ----
 
     sealed interface PaymentState permits Pending, Authorized, Captured, Declined, Refunded {}
     record Pending(String orderId, double amount) implements PaymentState {}
@@ -252,13 +252,13 @@ public class SealedClassesAndInterfaces {
     record Invalid<T>(List<String> errors) implements Validation<T> {}
 
     // ============================================================
-    // Section 1: Introduction to Sealed Classes
+    // Sekcja 1: Wprowadzenie do klas sealed
     // ============================================================
 
     static void introductionToSealedClasses() {
         System.out.println("=== Section 1: Introduction to Sealed Classes ===");
 
-        // Create Shape instances
+        // Tworzenie instancji Shape
         Shape circle = new Circle(5.0);
         Shape rectangle = new Rectangle(4.0, 6.0);
         Shape triangle = new Triangle(3.0, 4.0, 5.0);
@@ -267,7 +267,7 @@ public class SealedClassesAndInterfaces {
         System.out.println("rectangle: " + rectangle);
         System.out.println("triangle:  " + triangle);
 
-        // instanceof pattern matching — the permitted subtypes are known
+        // Dopasowywanie wzorców instanceof — dozwolone podtypy są znane
         List<Shape> shapes = List.of(circle, rectangle, triangle);
         for (var shape : shapes) {
             if (shape instanceof Circle c) {
@@ -277,16 +277,16 @@ public class SealedClassesAndInterfaces {
                 System.out.println("Rectangle " + r.width() + "x" + r.height()
                         + " → area = " + (r.width() * r.height()));
             } else if (shape instanceof Triangle t) {
-                // Heron's formula
+                // Wzór Herona
                 double s = (t.a() + t.b() + t.c()) / 2;
                 double area = Math.sqrt(s * (s - t.a()) * (s - t.b()) * (s - t.c()));
                 System.out.println("Triangle (" + t.a() + ", " + t.b() + ", " + t.c()
                         + ") → area = " + area);
             }
-            // No else needed — compiler knows these are all the options
+            // Nie potrzeba else — kompilator wie, że to wszystkie opcje
         }
 
-        // The sealed interface guarantees a closed set of subtypes
+        // Interfejs sealed gwarantuje zamknięty zbiór podtypów
         System.out.println("\nShape is sealed: " + Shape.class.isSealed());
         System.out.println("Permitted subtypes of Shape:");
         for (var subclass : Shape.class.getPermittedSubclasses()) {
@@ -295,13 +295,13 @@ public class SealedClassesAndInterfaces {
     }
 
     // ============================================================
-    // Section 2: Syntax and Rules
+    // Sekcja 2: Składnia i reguły
     // ============================================================
 
     static void syntaxAndRules() {
         System.out.println("\n=== Section 2: Syntax and Rules ===");
 
-        // Vehicle hierarchy demonstrates all three required modifiers
+        // Hierarchia Vehicle demonstruje wszystkie trzy wymagane modyfikatory
         var car = new Car("Toyota", "Camry");
         var heavyTruck = new HeavyTruck();
         var lightTruck = new LightTruck();
@@ -312,7 +312,7 @@ public class SealedClassesAndInterfaces {
         System.out.println("lightTruck: " + lightTruck);
         System.out.println("motorcycle: " + motorcycle);
 
-        // Show the three modifier types
+        // Pokazanie trzech typów modyfikatorów
         System.out.println("\n--- Modifier types in the Vehicle hierarchy ---");
         System.out.println("Vehicle is sealed: " + Vehicle.class.isSealed());
         System.out.println("Car is final: " + java.lang.reflect.Modifier.isFinal(Car.class.getModifiers()));
@@ -321,7 +321,7 @@ public class SealedClassesAndInterfaces {
                 + "isSealed=" + Motorcycle.class.isSealed()
                 + ", isFinal=" + java.lang.reflect.Modifier.isFinal(Motorcycle.class.getModifiers()));
 
-        // Reflection API: getPermittedSubclasses()
+        // API refleksji: getPermittedSubclasses()
         System.out.println("\nPermitted subtypes of Vehicle:");
         for (var subclass : Vehicle.class.getPermittedSubclasses()) {
             System.out.println("  - " + subclass.getSimpleName());
@@ -331,7 +331,7 @@ public class SealedClassesAndInterfaces {
             System.out.println("  - " + subclass.getSimpleName());
         }
 
-        // non-sealed allows further extension
+        // non-sealed pozwala na dalsze rozszerzanie
         class SportBike extends Motorcycle {
             @Override public String toString() { return "SportBike (extends Motorcycle)"; }
         }
@@ -341,20 +341,20 @@ public class SealedClassesAndInterfaces {
     }
 
     // ============================================================
-    // Section 3: Sealed Interfaces
+    // Sekcja 3: Interfejsy sealed
     // ============================================================
 
     static void sealedInterfaces() {
         System.out.println("\n=== Section 3: Sealed Interfaces ===");
 
-        // Result<T> with Success/Failure — a classic sum type
+        // Result<T> z Success/Failure — klasyczny typ sumy
         Result<String> success = new Success<>("Hello, World!");
         Result<String> failure = new Failure<>("Connection timeout");
 
         System.out.println("success: " + success);
         System.out.println("failure: " + failure);
 
-        // Simulate service calls returning Result<T>
+        // Symulacja wywołań serwisowych zwracających Result<T>
         System.out.println("\n--- Simulating service calls ---");
         List<Result<Integer>> results = List.of(
                 new Success<>(42),
@@ -372,18 +372,18 @@ public class SealedClassesAndInterfaces {
             }
         }
 
-        // Count successes and failures
+        // Zliczanie sukcesów i niepowodzeń
         long successCount = results.stream().filter(r -> r instanceof Success).count();
         long failureCount = results.stream().filter(r -> r instanceof Failure).count();
         System.out.println("successes: " + successCount + ", failures: " + failureCount);
 
-        // Enum implementing sealed interface
+        // Enum implementujący interfejs sealed
         System.out.println("\n--- Enum implementing sealed interface ---");
         System.out.println("LogLevel values: " + Arrays.toString(LogLevel.values()));
         System.out.println("LogLevel.DEBUG is Loggable: " + (LogLevel.DEBUG instanceof Loggable));
         System.out.println("Loggable is sealed: " + Loggable.class.isSealed());
 
-        // Using LogLevel as Loggable
+        // Użycie LogLevel jako Loggable
         Loggable loggable = LogLevel.WARN;
         if (loggable instanceof LogLevel level) {
             System.out.println("Log level: " + level + " (ordinal: " + level.ordinal() + ")");
@@ -391,7 +391,7 @@ public class SealedClassesAndInterfaces {
     }
 
     // ============================================================
-    // Section 4: Sealed Classes and Pattern Matching
+    // Sekcja 4: Klasy sealed i dopasowywanie wzorców
     // ============================================================
 
     static double area(Shape shape) {
@@ -402,7 +402,7 @@ public class SealedClassesAndInterfaces {
                 double s = (t.a() + t.b() + t.c()) / 2;
                 yield Math.sqrt(s * (s - t.a()) * (s - t.b()) * (s - t.c()));
             }
-            // No default needed — all permitted subtypes are covered!
+            // Nie potrzeba default — wszystkie dozwolone podtypy są pokryte!
         };
     }
 
@@ -416,7 +416,7 @@ public class SealedClassesAndInterfaces {
     static void sealedClassesAndPatternMatching() {
         System.out.println("\n=== Section 4: Sealed Classes and Pattern Matching ===");
 
-        // Exhaustive switch expression with area()
+        // Wyczerpujące wyrażenie switch z area()
         List<Shape> shapes = List.of(
                 new Circle(5.0),
                 new Rectangle(4.0, 6.0),
@@ -430,7 +430,7 @@ public class SealedClassesAndInterfaces {
             System.out.printf("  %-30s → area = %.4f%n", shape, area(shape));
         }
 
-        // formatResult() via switch
+        // formatResult() przez switch
         System.out.println("\n--- formatResult() via switch expression ---");
         List<Result<String>> results = List.of(
                 new Success<>("data loaded"),
@@ -441,7 +441,7 @@ public class SealedClassesAndInterfaces {
             System.out.println("  " + formatResult(result));
         }
 
-        // Guarded patterns with `when`
+        // Wzorce ze strażnikami `when`
         System.out.println("\n--- Guarded patterns with `when` ---");
         List<Shape> moreShapes = List.of(
                 new Circle(150.0),
@@ -462,7 +462,7 @@ public class SealedClassesAndInterfaces {
             System.out.println("  " + description);
         }
 
-        // Process a list of shapes — total area
+        // Przetworzenie listy kształtów — łączne pole
         double totalArea = shapes.stream()
                 .mapToDouble(SealedClassesAndInterfaces::area)
                 .sum();
@@ -470,7 +470,7 @@ public class SealedClassesAndInterfaces {
     }
 
     // ============================================================
-    // Section 5: Sealed Classes with Records — Algebraic Data Types
+    // Sekcja 5: Klasy sealed z Record — Algebraiczne typy danych
     // ============================================================
 
     static double evaluate(Expression expr, Map<String, Double> env) {
@@ -500,7 +500,7 @@ public class SealedClassesAndInterfaces {
     static void sealedClassesWithRecordsADTs() {
         System.out.println("\n=== Section 5: Sealed Classes with Records — Algebraic Data Types ===");
 
-        // Build expression tree: (x + 2) * -(3 + x)
+        // Budowanie drzewa wyrażeń: (x + 2) * -(3 + x)
         Expression expr = new Mul(
                 new Add(new Var("x"), new Num(2)),
                 new Neg(new Add(new Num(3), new Var("x")))
@@ -508,20 +508,20 @@ public class SealedClassesAndInterfaces {
 
         System.out.println("Expression: " + prettyPrint(expr));
 
-        // Evaluate with x = 5
+        // Ewaluacja z x = 5
         var env = Map.of("x", 5.0);
         double result = evaluate(expr, env);
         System.out.println("With x=5:   " + prettyPrint(expr) + " = " + result);
         System.out.println("Expected:   (5 + 2) * -(3 + 5) = 7 * -8 = -56.0");
 
-        // Evaluate with different values
+        // Ewaluacja z różnymi wartościami
         System.out.println("\n--- Evaluating with different x values ---");
         for (int x = -3; x <= 3; x++) {
             var e = Map.of("x", (double) x);
             System.out.printf("  x=%2d → %s = %.1f%n", x, prettyPrint(expr), evaluate(expr, e));
         }
 
-        // More expressions
+        // Więcej wyrażeń
         System.out.println("\n--- More expression examples ---");
 
         Expression simple = new Add(new Num(1), new Num(2));
@@ -537,7 +537,7 @@ public class SealedClassesAndInterfaces {
         var multiEnv = Map.of("a", 2.0, "b", 3.0, "c", 1.0);
         System.out.println(prettyPrint(withVars) + " with a=2, b=3, c=1 = " + evaluate(withVars, multiEnv));
 
-        // Show that sealed + records give us true ADTs
+        // Pokazanie że sealed + record dają nam prawdziwe ADT
         System.out.println("\n--- Expression hierarchy ---");
         System.out.println("Expression is sealed: " + Expression.class.isSealed());
         System.out.println("Permitted subtypes:");
@@ -547,10 +547,10 @@ public class SealedClassesAndInterfaces {
     }
 
     // ============================================================
-    // Section 6: Practical Patterns and Design Guidelines
+    // Sekcja 6: Wzorce praktyczne i wytyczne projektowe
     // ============================================================
 
-    // Payment state machine transitions
+    // Przejścia maszyny stanów płatności
     static PaymentState authorize(Pending pending, String authCode) {
         System.out.println("  Authorizing order " + pending.orderId() + "...");
         return new Authorized(pending.orderId(), pending.amount(), authCode);
@@ -581,7 +581,7 @@ public class SealedClassesAndInterfaces {
         };
     }
 
-    // Validation utilities
+    // Narzędzia walidacji
     static Validation<String> validateEmail(String email) {
         var errors = new ArrayList<String>();
         if (email == null || email.isBlank()) {
@@ -618,7 +618,7 @@ public class SealedClassesAndInterfaces {
     static void practicalPatternsAndDesignGuidelines() {
         System.out.println("\n=== Section 6: Practical Patterns and Design Guidelines ===");
 
-        // Payment state machine — happy path
+        // Maszyna stanów płatności — ścieżka pozytywna
         System.out.println("--- Payment state machine: happy path ---");
         PaymentState state = new Pending("ORD-001", 99.99);
         System.out.println("  " + describePaymentState(state));
@@ -629,7 +629,7 @@ public class SealedClassesAndInterfaces {
         state = capture((Authorized) state);
         System.out.println("  " + describePaymentState(state));
 
-        // Payment state machine — decline path
+        // Maszyna stanów płatności — ścieżka odrzucenia
         System.out.println("\n--- Payment state machine: decline path ---");
         PaymentState state2 = new Pending("ORD-002", 5000.00);
         System.out.println("  " + describePaymentState(state2));
@@ -637,7 +637,7 @@ public class SealedClassesAndInterfaces {
         state2 = decline((Pending) state2, "Insufficient funds");
         System.out.println("  " + describePaymentState(state2));
 
-        // Payment state machine — refund path
+        // Maszyna stanów płatności — ścieżka zwrotu
         System.out.println("\n--- Payment state machine: refund path ---");
         PaymentState state3 = new Pending("ORD-003", 249.50);
         state3 = authorize((Pending) state3, "AUTH-67890");
@@ -666,7 +666,7 @@ public class SealedClassesAndInterfaces {
             System.out.println("  \"" + email + "\" → " + desc);
         }
 
-        // Mapping validations
+        // Mapowanie walidacji
         System.out.println("\n--- Mapping validations ---");
         var valid = validateEmail("user@example.com");
         var mapped = map(valid, String::toUpperCase);
@@ -676,7 +676,7 @@ public class SealedClassesAndInterfaces {
         var mappedInvalid = map(invalid, String::toUpperCase);
         System.out.println("  map(invalid email, toUpperCase): " + mappedInvalid);
 
-        // Combining validations
+        // Łączenie walidacji
         System.out.println("\n--- Combining validations ---");
         Validation<String> v1 = new Invalid<>(List.of("too short"));
         Validation<String> v2 = new Invalid<>(List.of("missing @", "missing dot"));
@@ -689,7 +689,7 @@ public class SealedClassesAndInterfaces {
     }
 
     // ============================================================
-    // Main — run all sections
+    // Main — uruchomienie wszystkich sekcji
     // ============================================================
 
     public static void main(String[] args) {

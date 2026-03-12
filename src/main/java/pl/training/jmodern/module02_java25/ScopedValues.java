@@ -5,154 +5,154 @@ import java.util.concurrent.*;
 import java.util.concurrent.StructuredTaskScope.*;
 
 // ============================================================
-// Section 1: Introduction -- Why ScopedValue
+// Sekcja 1: Wprowadzenie -- Dlaczego ScopedValue
 // ============================================================
 
 /*
-## Introduction -- Why ScopedValue
+## Wprowadzenie -- Dlaczego ScopedValue
 
-- **ThreadLocal problems with virtual threads**:
-    - Memory waste: millions of virtual threads = millions of
-      independent ThreadLocal copies.
-    - Mutable: any code with a reference can call `set()`, making
-      it hard to reason about what value is current.
-    - No bounded lifetime: if you forget `remove()`, the value
-      leaks for the thread's entire lifetime.
-    - Inherited copies (InheritableThreadLocal) are independent
-      mutable snapshots — parent and child can diverge silently.
-- **ScopedValue**: a lightweight, immutable alternative.
-    - Value is bound for the duration of a lambda passed to
-      `run()` or `call()`, then automatically unbound.
-    - Immutability guarantee: once bound, value cannot change
-      within that scope. There is no `set()` method.
-    - Automatically inherited by child virtual threads forked
-      via `StructuredTaskScope.fork()`.
-- **JEP timeline**:
-    - JEP 429: Incubator in Java 20
-    - JEP 446: Preview in Java 21
-    - JEP 464: Second preview in Java 22
-    - JEP 481: Third preview in Java 23
-    - JEP 487: Fourth preview in Java 24
-    - Preview in Java 25
-- **API shape** (current as of Java 25):
-    - `ScopedValue.newInstance()` — factory method
+- **Problemy ThreadLocal z virtual threads**:
+    - Marnowanie pamięci: miliony virtual threads = miliony
+      niezależnych kopii ThreadLocal.
+    - Mutowalność: każdy kod z referencją może wywołać `set()`,
+      co utrudnia rozumowanie, jaka wartość jest aktualna.
+    - Brak ograniczonego czasu życia: jeśli zapomnisz `remove()`,
+      wartość wycieka przez cały czas życia wątku.
+    - Odziedziczone kopie (InheritableThreadLocal) to niezależne
+      mutowalne migawki — rodzic i dziecko mogą się cicho rozejść.
+- **ScopedValue**: lekka, niemutowalna alternatywa.
+    - Wartość jest wiązana na czas trwania lambdy przekazanej do
+      `run()` lub `call()`, a potem automatycznie odwiązywana.
+    - Gwarancja niemutowalności: raz związana, wartość nie może
+      się zmienić w tym zakresie. Nie ma metody `set()`.
+    - Automatycznie dziedziczone przez potomne virtual threads
+      utworzone przez `StructuredTaskScope.fork()`.
+- **Oś czasu JEP**:
+    - JEP 429: Inkubator w Java 20
+    - JEP 446: Preview w Java 21
+    - JEP 464: Drugi preview w Java 22
+    - JEP 481: Trzeci preview w Java 23
+    - JEP 487: Czwarty preview w Java 24
+    - Preview w Java 25
+- **Kształt API** (aktualny na Java 25):
+    - `ScopedValue.newInstance()` — metoda fabryczna
     - `ScopedValue.where(sv, value)` → `Carrier`
-    - `Carrier.where(sv, value)` — chaining multiple bindings
+    - `Carrier.where(sv, value)` — łączenie wielu wiązań
     - `Carrier.run(Runnable)` / `Carrier.call(CallableOp)`
-    - `ScopedValue.get()` — read the bound value
-    - `ScopedValue.isBound()` — check if currently bound
-    - `ScopedValue.orElse(T)` — bound value or default
-    - `ScopedValue.orElseThrow(Supplier)` — bound value or throw
-- **Note**: old `ScopedValue.runWhere()` no longer exists; the
-  current API is `ScopedValue.where(...).run(...)`.
+    - `ScopedValue.get()` — odczyt związanej wartości
+    - `ScopedValue.isBound()` — sprawdzenie, czy jest aktualnie związana
+    - `ScopedValue.orElse(T)` — związana wartość lub domyślna
+    - `ScopedValue.orElseThrow(Supplier)` — związana wartość lub wyjątek
+- **Uwaga**: stare `ScopedValue.runWhere()` już nie istnieje;
+  aktualne API to `ScopedValue.where(...).run(...)`.
 */
 
 // ============================================================
-// Section 2: Creating and Binding -- newInstance, where, run, call
+// Sekcja 2: Tworzenie i wiązanie -- newInstance, where, run, call
 // ============================================================
 
 /*
-## Creating and Binding -- newInstance, where, run, call
+## Tworzenie i wiązanie -- newInstance, where, run, call
 
-- `ScopedValue.newInstance()` creates a new unbound ScopedValue.
-  By convention, declared as `private static final` fields —
-  similar to loggers.
-- `ScopedValue.where(sv, value)` returns a `Carrier` that holds
-  the binding but does not yet activate it.
-- `Carrier.run(Runnable)` — activates bindings, runs the lambda,
-  then automatically unbinds when the lambda returns.
-- `Carrier.call(CallableOp<R, X>)` — like `run()` but returns
-  a value. `CallableOp<T, X extends Throwable>` is a functional
-  interface that parameterizes the exception type (unlike
-  `Callable<T>` which always throws `Exception`).
-- `ScopedValue.get()` retrieves the bound value from the current
-  thread's scope. Throws `NoSuchElementException` if unbound.
-- Best practice: declare as `static final` fields, bind at the
-  entry point (controller, handler), read deep in the call stack.
+- `ScopedValue.newInstance()` tworzy nowe niezwiązane ScopedValue.
+  Konwencjonalnie deklarowane jako pola `private static final` —
+  podobnie do loggerów.
+- `ScopedValue.where(sv, value)` zwraca `Carrier`, który przechowuje
+  wiązanie, ale jeszcze go nie aktywuje.
+- `Carrier.run(Runnable)` — aktywuje wiązania, uruchamia lambdę,
+  a następnie automatycznie odwiązuje po powrocie lambdy.
+- `Carrier.call(CallableOp<R, X>)` — jak `run()`, ale zwraca
+  wartość. `CallableOp<T, X extends Throwable>` to interfejs
+  funkcyjny parametryzujący typ wyjątku (w przeciwieństwie do
+  `Callable<T>`, który zawsze rzuca `Exception`).
+- `ScopedValue.get()` pobiera związaną wartość z zakresu bieżącego
+  wątku. Rzuca `NoSuchElementException` jeśli niezwiązana.
+- Najlepsza praktyka: deklaruj jako pola `static final`, wiąż
+  w punkcie wejścia (kontroler, handler), odczytuj głęboko w stosie wywołań.
 */
 
 // ============================================================
-// Section 3: Rebinding and Nesting -- Shadowing, orElse, orElseThrow
+// Sekcja 3: Ponowne wiązanie i zagnieżdżanie -- Przesłanianie, orElse, orElseThrow
 // ============================================================
 
 /*
-## Rebinding and Nesting -- Shadowing, orElse, orElseThrow
+## Ponowne wiązanie i zagnieżdżanie -- Przesłanianie, orElse, orElseThrow
 
-- **Rebinding** in a nested scope **shadows** the outer binding.
-  When the inner scope exits, the outer binding is restored.
-- This is analogous to lexical variable shadowing in most
-  programming languages.
-- Rebinding is the **only way to "change"** a ScopedValue —
-  there is no `set()` method.
-- `orElse(T defaultValue)` — returns the bound value if bound,
-  or the default value if unbound. Never throws.
-- `orElseThrow(Supplier<X>)` — returns the bound value if bound,
-  or throws the supplied exception if unbound. Useful for
-  mandatory context enforcement.
+- **Ponowne wiązanie** w zagnieżdżonym zakresie **przesłania** wiązanie zewnętrzne.
+  Gdy wewnętrzny zakres się kończy, wiązanie zewnętrzne jest przywracane.
+- Jest to analogiczne do leksykalnego przesłaniania zmiennych w większości
+  języków programowania.
+- Ponowne wiązanie to **jedyny sposób na "zmianę"** ScopedValue —
+  nie ma metody `set()`.
+- `orElse(T defaultValue)` — zwraca związaną wartość jeśli jest związana,
+  lub wartość domyślną jeśli niezwiązana. Nigdy nie rzuca wyjątku.
+- `orElseThrow(Supplier<X>)` — zwraca związaną wartość jeśli jest związana,
+  lub rzuca dostarczony wyjątek jeśli niezwiązana. Przydatne do
+  wymuszania obowiązkowego kontekstu.
 */
 
 // ============================================================
-// Section 4: Multiple Bindings -- Carrier Chaining
+// Sekcja 4: Wiązanie wielu wartości -- Łączenie Carrier
 // ============================================================
 
 /*
-## Multiple Bindings -- Carrier Chaining
+## Wiązanie wielu wartości -- Łączenie Carrier
 
-- Chain multiple bindings with `.where().where().where()`:
+- Łączenie wielu wiązań przez `.where().where().where()`:
     ScopedValue.where(USER, "alice")
                .where(TRACE_ID, "abc-123")
                .where(TENANT, "acme")
                .run(() -> { ... });
-- All bindings are established atomically when `run()` or
-  `call()` begins, and torn down when the lambda returns.
-- `Carrier.get(ScopedValue<T>)` lets you inspect a binding
-  in the carrier before executing the scope.
-- This replaces the "context object" anti-pattern or juggling
-  multiple ThreadLocals.
+- Wszystkie wiązania są ustanawiane atomowo, gdy `run()` lub
+  `call()` się rozpoczyna, i usuwane po powrocie lambdy.
+- `Carrier.get(ScopedValue<T>)` pozwala sprawdzić wiązanie
+  w carrierze przed wykonaniem zakresu.
+- Zastępuje to anty-wzorzec "obiektu kontekstu" lub żonglowanie
+  wieloma ThreadLocal.
 */
 
 // ============================================================
-// Section 5: Integration with Structured Concurrency
+// Sekcja 5: Integracja ze structured concurrency
 // ============================================================
 
 /*
-## Integration with Structured Concurrency
+## Integracja ze structured concurrency
 
-- ScopedValues are **automatically inherited** by child virtual
-  threads created via `StructuredTaskScope.fork()`.
-- Key synergy: structured concurrency = bounded thread lifetimes,
-  ScopedValue = bounded context lifetimes. Together they ensure
-  context propagation is safe and leak-free.
-- Unlike ThreadLocal (which gives each child an independent
-  mutable copy), ScopedValue gives all children a **read-only
-  view** of the same immutable binding.
-- Typical pattern:
+- Scoped values są **automatycznie dziedziczone** przez potomne virtual
+  threads tworzone przez `StructuredTaskScope.fork()`.
+- Kluczowa synergia: structured concurrency = ograniczone czasy życia wątków,
+  ScopedValue = ograniczone czasy życia kontekstu. Razem zapewniają,
+  że propagacja kontekstu jest bezpieczna i wolna od wycieków.
+- W przeciwieństwie do ThreadLocal (który daje każdemu dziecku niezależną
+  mutowalną kopię), ScopedValue daje wszystkim dzieciom **widok
+  tylko do odczytu** tego samego niemutowalnego wiązania.
+- Typowy wzorzec:
     ScopedValue.where(USER, "alice").run(() -> {
         try (var scope = StructuredTaskScope.open(...)) {
-            scope.fork(() -> { ... USER.get() ... }); // inherited
+            scope.fork(() -> { ... USER.get() ... }); // dziedziczone
             scope.join();
         }
     });
-- A child task can **rebind** a ScopedValue in its own nested
-  scope without affecting the parent or sibling tasks.
-- Cross-reference: StructuredConcurrency.java Section 5.
+- Zadanie potomne może **ponownie związać** ScopedValue we własnym
+  zagnieżdżonym zakresie bez wpływu na rodzica lub zadania siostrzane.
+- Odniesienie: StructuredConcurrency.java Sekcja 5.
 */
 
 public class ScopedValues {
 
-    // ---- Class-level ScopedValue declarations ----
+    // ---- Deklaracje ScopedValue na poziomie klasy ----
 
     static final ScopedValue<String> CURRENT_USER = ScopedValue.newInstance();
     static final ScopedValue<String> TRACE_ID = ScopedValue.newInstance();
     static final ScopedValue<String> TENANT = ScopedValue.newInstance();
 
-    // ---- Inner types ----
+    // ---- Typy wewnętrzne ----
 
     record RequestContext(String requestId, String userId, String traceId) {}
     record AuditEntry(String action, String user, String threadName) {}
     record ServiceResult(String service, String data, String boundUser) {}
 
-    // ---- Helper methods ----
+    // ---- Metody pomocnicze ----
 
     static void handleLayer(String layerName) {
         System.out.println("    [" + layerName + "] CURRENT_USER = " + CURRENT_USER.get());
@@ -170,7 +170,7 @@ public class ScopedValues {
     }
 
     // ============================================================
-    // Section 1: Introduction -- Why ScopedValue
+    // Sekcja 1: Wprowadzenie -- Dlaczego ScopedValue
     // ============================================================
 
     static void introductionWhyScopedValue() {
@@ -179,31 +179,31 @@ public class ScopedValues {
         // ---- Demo 1: ThreadLocal vs ScopedValue ----
         System.out.println("\n--- Demo 1: ThreadLocal vs ScopedValue ---");
 
-        // ThreadLocal approach: manual set/get/remove
+        // Podejście ThreadLocal: ręczne set/get/remove
         var threadLocal = new ThreadLocal<String>();
         threadLocal.set("alice");
         System.out.println("  ThreadLocal.get(): " + threadLocal.get());
-        threadLocal.remove(); // Must remember to call remove()!
+        threadLocal.remove(); // Trzeba pamiętać o wywołaniu remove()!
         System.out.println("  ThreadLocal after remove(): " + threadLocal.get());
         System.out.println("  Problem: forgetting remove() causes leaks");
 
-        // ScopedValue approach: auto-unbinds after run() exits
+        // Podejście ScopedValue: automatyczne odwiązanie po wyjściu z run()
         ScopedValue.where(CURRENT_USER, "alice").run(() -> {
             System.out.println("  ScopedValue.get() inside run(): " + CURRENT_USER.get());
         });
         System.out.println("  ScopedValue after run(): isBound=" + CURRENT_USER.isBound());
         System.out.println("  Benefit: automatic cleanup, no possible leak");
 
-        // ---- Demo 2: Immutability ----
+        // ---- Demo 2: Niemutowalność ----
         System.out.println("\n--- Demo 2: Immutability ---");
         ScopedValue.where(CURRENT_USER, "bob").run(() -> {
             System.out.println("  CURRENT_USER = " + CURRENT_USER.get());
             System.out.println("  There is no set() method on ScopedValue");
             System.out.println("  The value is fixed for the entire scope");
-            // CURRENT_USER.set("charlie"); // Does not compile — no such method
+            // CURRENT_USER.set("charlie"); // Nie kompiluje się — brak takiej metody
         });
 
-        // ---- Demo 3: Unbound access ----
+        // ---- Demo 3: Dostęp do niezwiązanej wartości ----
         System.out.println("\n--- Demo 3: Unbound access ---");
         System.out.println("  Outside any scope: isBound=" + CURRENT_USER.isBound());
         try {
@@ -219,13 +219,13 @@ public class ScopedValues {
     }
 
     // ============================================================
-    // Section 2: Creating and Binding -- newInstance, where, run, call
+    // Sekcja 2: Tworzenie i wiązanie -- newInstance, where, run, call
     // ============================================================
 
     static void creatingAndBindingScopedValues() throws Exception {
         System.out.println("\n=== Section 2: Creating and Binding -- newInstance, where, run, call ===");
 
-        // ---- Demo 1: Basic binding with run() ----
+        // ---- Demo 1: Podstawowe wiązanie z run() ----
         System.out.println("\n--- Demo 1: Basic binding with run() ---");
         ScopedValue.where(CURRENT_USER, "alice").run(() -> {
             System.out.println("  Entry point: CURRENT_USER = " + CURRENT_USER.get());
@@ -235,7 +235,7 @@ public class ScopedValues {
             System.out.println("  Value propagated through entire call stack without parameter passing");
         });
 
-        // ---- Demo 2: Binding with call() ----
+        // ---- Demo 2: Wiązanie z call() ----
         System.out.println("\n--- Demo 2: Binding with call() ---");
         String result = ScopedValue.where(CURRENT_USER, "bob").call(() -> {
             var audit = auditAction("CREATE_ORDER");
@@ -244,7 +244,7 @@ public class ScopedValues {
         });
         System.out.println("  call() returned: " + result);
 
-        // call() with checked exception support
+        // call() z obsługą wyjątków sprawdzanych
         System.out.println("  call() supports checked exceptions via CallableOp<R, X>:");
         try {
             ScopedValue.where(CURRENT_USER, "charlie").call(() -> {
@@ -257,14 +257,14 @@ public class ScopedValues {
             System.out.println("  Caught checked exception: " + e.getMessage());
         }
 
-        // ---- Demo 3: isBound() for conditional logic ----
+        // ---- Demo 3: isBound() dla logiki warunkowej ----
         System.out.println("\n--- Demo 3: isBound() for conditional logic ---");
         System.out.println("  resolveUser() outside scope: " + resolveUser());
         ScopedValue.where(CURRENT_USER, "diana").run(() -> {
             System.out.println("  resolveUser() inside scope: " + resolveUser());
         });
 
-        // ---- Demo 4: Carrier reuse ----
+        // ---- Demo 4: Ponowne użycie Carrier ----
         System.out.println("\n--- Demo 4: Carrier reuse ---");
         var carrier = ScopedValue.where(CURRENT_USER, "eve");
         carrier.run(() -> System.out.println("  First run: " + CURRENT_USER.get()));
@@ -273,13 +273,13 @@ public class ScopedValues {
     }
 
     // ============================================================
-    // Section 3: Rebinding and Nesting -- Shadowing, orElse, orElseThrow
+    // Sekcja 3: Ponowne wiązanie i zagnieżdżanie -- Przesłanianie, orElse, orElseThrow
     // ============================================================
 
     static void rebindingAndNesting() {
         System.out.println("\n=== Section 3: Rebinding and Nesting -- Shadowing, orElse, orElseThrow ===");
 
-        // ---- Demo 1: Nested rebinding ----
+        // ---- Demo 1: Zagnieżdżone ponowne wiązanie ----
         System.out.println("\n--- Demo 1: Nested rebinding (shadowing) ---");
         ScopedValue.where(CURRENT_USER, "outer-user").run(() -> {
             System.out.println("  Outer scope: " + CURRENT_USER.get());
@@ -291,7 +291,7 @@ public class ScopedValues {
             System.out.println("  Outer scope restored: " + CURRENT_USER.get());
         });
 
-        // ---- Demo 2: Multiple nesting levels ----
+        // ---- Demo 2: Wiele poziomów zagnieżdżania ----
         System.out.println("\n--- Demo 2: Multiple nesting levels ---");
         ScopedValue.where(CURRENT_USER, "level-1").run(() -> {
             System.out.println("  Enter level 1: " + CURRENT_USER.get());
@@ -310,7 +310,7 @@ public class ScopedValues {
         });
 
         // ---- Demo 3: orElse() ----
-        System.out.println("\n--- Demo 3: orElse() -- safe defaults ---");
+        System.out.println("\n--- Demo 3: orElse() -- bezpieczne wartości domyślne ---");
         System.out.println("  Outside scope: CURRENT_USER.orElse(\"guest\") = " + CURRENT_USER.orElse("guest"));
         ScopedValue.where(CURRENT_USER, "alice").run(() -> {
             System.out.println("  Inside scope: CURRENT_USER.orElse(\"guest\") = " + CURRENT_USER.orElse("guest"));
@@ -318,7 +318,7 @@ public class ScopedValues {
         System.out.println("  After scope: CURRENT_USER.orElse(\"guest\") = " + CURRENT_USER.orElse("guest"));
 
         // ---- Demo 4: orElseThrow() ----
-        System.out.println("\n--- Demo 4: orElseThrow() -- mandatory context enforcement ---");
+        System.out.println("\n--- Demo 4: orElseThrow() -- wymuszanie obowiązkowego kontekstu ---");
         try {
             String user = CURRENT_USER.orElseThrow(() -> new IllegalStateException("No user in context!"));
             System.out.println("  Should not reach here: " + user);
@@ -333,13 +333,13 @@ public class ScopedValues {
     }
 
     // ============================================================
-    // Section 4: Multiple Bindings -- Carrier Chaining
+    // Sekcja 4: Wiązanie wielu wartości -- Łączenie Carrier
     // ============================================================
 
     static void multipleBindingsCarrierChaining() throws Exception {
         System.out.println("\n=== Section 4: Multiple Bindings -- Carrier Chaining ===");
 
-        // ---- Demo 1: Chaining ----
+        // ---- Demo 1: Łączenie ----
         System.out.println("\n--- Demo 1: Chaining multiple ScopedValues ---");
         ScopedValue.where(CURRENT_USER, "alice")
                 .where(TRACE_ID, "trace-abc-123")
@@ -352,7 +352,7 @@ public class ScopedValues {
                 });
 
         // ---- Demo 2: Carrier.get() ----
-        System.out.println("\n--- Demo 2: Carrier.get() -- inspect before execution ---");
+        System.out.println("\n--- Demo 2: Carrier.get() -- inspekcja przed wykonaniem ---");
         var carrier = ScopedValue.where(CURRENT_USER, "bob")
                 .where(TRACE_ID, "trace-xyz-789")
                 .where(TENANT, "globex");
@@ -363,35 +363,35 @@ public class ScopedValues {
         System.out.println("  Inspected bindings before calling run()");
         carrier.run(() -> System.out.println("  Inside run(): CURRENT_USER = " + CURRENT_USER.get()));
 
-        // ---- Demo 3: Request context pattern ----
+        // ---- Demo 3: Wzorzec kontekstu żądania ----
         System.out.println("\n--- Demo 3: Request context pattern (controller -> service -> repository) ---");
         ScopedValue.where(CURRENT_USER, "charlie")
                 .where(TRACE_ID, "trace-req-001")
                 .where(TENANT, "initech")
                 .run(() -> {
-                    // Controller layer
+                    // Warstwa kontrolera
                     System.out.println("  [Controller] Handling request for user=" + CURRENT_USER.get()
                             + ", trace=" + TRACE_ID.get());
 
-                    // Service layer — no parameters passed, reads ScopedValues directly
+                    // Warstwa serwisu — bez przekazywania parametrów, odczytuje scoped values bezpośrednio
                     System.out.println("  [Service] Processing order for tenant=" + TENANT.get()
                             + ", user=" + CURRENT_USER.get());
 
-                    // Repository layer
+                    // Warstwa repozytorium
                     System.out.println("  [Repository] Querying DB for tenant=" + TENANT.get()
                             + ", trace=" + TRACE_ID.get());
 
                     System.out.println("  No parameter passing needed — all layers read ScopedValues directly");
                 });
 
-        // ---- Demo 4: Partial rebinding ----
+        // ---- Demo 4: Częściowe ponowne wiązanie ----
         System.out.println("\n--- Demo 4: Partial rebinding ---");
         ScopedValue.where(CURRENT_USER, "alice")
                 .where(TENANT, "acme")
                 .run(() -> {
                     System.out.println("  Outer: USER=" + CURRENT_USER.get() + ", TENANT=" + TENANT.get());
 
-                    // Rebind only USER, TENANT stays from outer scope
+                    // Ponowne wiązanie tylko USER, TENANT pozostaje z zakresu zewnętrznego
                     ScopedValue.where(CURRENT_USER, "bob").run(() -> {
                         System.out.println("  Inner: USER=" + CURRENT_USER.get() + ", TENANT=" + TENANT.get());
                         System.out.println("  Only USER was rebound; TENANT inherited from outer scope");
@@ -402,13 +402,13 @@ public class ScopedValues {
     }
 
     // ============================================================
-    // Section 5: Integration with Structured Concurrency
+    // Sekcja 5: Integracja ze structured concurrency
     // ============================================================
 
     static void integrationWithStructuredConcurrency() throws Exception {
         System.out.println("\n=== Section 5: Integration with Structured Concurrency ===");
 
-        // ---- Demo 1: Inherited by forked tasks ----
+        // ---- Demo 1: Dziedziczenie przez rozwidlone zadania ----
         System.out.println("\n--- Demo 1: ScopedValue inherited by forked tasks ---");
         ScopedValue.where(CURRENT_USER, "alice").run(() -> {
             try (var scope = StructuredTaskScope.open(Joiner.<String>allSuccessfulOrThrow())) {
@@ -435,7 +435,7 @@ public class ScopedValues {
             }
         });
 
-        // ---- Demo 2: Request tracing ----
+        // ---- Demo 2: Śledzenie żądań ----
         System.out.println("\n--- Demo 2: Request tracing with ScopedValues ---");
         ScopedValue.where(CURRENT_USER, "bob")
                 .where(TRACE_ID, "trace-req-42")
@@ -464,11 +464,11 @@ public class ScopedValues {
                     }
                 });
 
-        // ---- Demo 3: Rebinding in child task ----
+        // ---- Demo 3: Ponowne wiązanie w zadaniu potomnym ----
         System.out.println("\n--- Demo 3: Rebinding in child task ---");
         ScopedValue.where(CURRENT_USER, "admin").run(() -> {
             try (var scope = StructuredTaskScope.open(Joiner.<String>allSuccessfulOrThrow())) {
-                // This task rebinds USER to "service-account" in its own scope
+                // To zadanie ponownie wiąże USER do "service-account" we własnym zakresie
                 scope.fork(() -> {
                     return ScopedValue.where(CURRENT_USER, "service-account").call(() -> {
                         Thread.sleep(50);
@@ -476,7 +476,7 @@ public class ScopedValues {
                     });
                 });
 
-                // These tasks still see the original "admin" binding
+                // Te zadania nadal widzą oryginalne wiązanie "admin"
                 scope.fork(() -> {
                     Thread.sleep(60);
                     return "Sibling task 1: user=" + CURRENT_USER.get();
@@ -499,7 +499,7 @@ public class ScopedValues {
     }
 
     // ============================================================
-    // Main -- run all sections
+    // Main -- uruchomienie wszystkich sekcji
     // ============================================================
 
     public static void main(String[] args) throws Exception {

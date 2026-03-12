@@ -8,191 +8,191 @@ import java.util.concurrent.locks.*;
 import java.util.stream.*;
 
 // ============================================================
-// Section 1: Introduction -- Why Virtual Threads
+// Sekcja 1: Wprowadzenie -- Dlaczego virtual threads
 // ============================================================
 
 /*
-## Introduction -- Why Virtual Threads
+## Wprowadzenie -- Dlaczego virtual threads
 
-- **Problem**: OS (platform) threads are expensive.
-    - Each thread typically reserves ~1 MB of stack memory.
-    - Thread creation involves a kernel call and scheduling overhead.
-    - In practice, a JVM can sustain **~2,000--10,000 platform threads**
-      before hitting OS limits, memory pressure, or scheduling
-      degradation.
-- **How other languages solved this**:
-    - Go: **goroutines** (lightweight, runtime-scheduled)
-    - Kotlin: **coroutines** (suspend functions, structured concurrency)
-    - JavaScript: **async/await** (single-threaded event loop)
-    - All of these require a **different programming model** -- you
-      cannot simply call blocking methods and expect things to work.
-- **Java's approach**: keep the familiar **blocking-style code** but
-  make the threads themselves cheap. No colored functions, no async
-  annotations, no new syntax.
-- **JEP timeline**:
-    - JEP 425: Preview in Java 19
-    - JEP 436: Second preview in Java 20
-    - JEP 444: Finalized in **Java 21**
-- **Virtual threads** are user-mode threads scheduled by the JVM,
-  not by the OS. The JVM maps many virtual threads onto a small
-  pool of **carrier threads** (a ForkJoinPool). When a virtual thread
-  blocks (sleep, I/O, lock), the JVM **unmounts** it from the carrier
-  and mounts another virtual thread -- so the carrier is never idle.
-- The result: you can create **millions** of virtual threads, each
-  one blocking freely, with the JVM transparently multiplexing them
-  onto a handful of OS threads.
+- **Problem**: Wątki systemu operacyjnego (platformowe) są kosztowne.
+    - Każdy wątek zazwyczaj rezerwuje ~1 MB pamięci stosu.
+    - Tworzenie wątku wymaga wywołania jądra i narzutu na planowanie.
+    - W praktyce JVM może obsłużyć **~2 000--10 000 wątków platformowych**
+      zanim osiągnie limity systemu operacyjnego, presję pamięciową lub
+      degradację planowania.
+- **Jak inne języki rozwiązały ten problem**:
+    - Go: **goroutines** (lekkie, planowane przez runtime)
+    - Kotlin: **coroutines** (funkcje suspend, structured concurrency)
+    - JavaScript: **async/await** (jednowątkowa pętla zdarzeń)
+    - Wszystkie te rozwiązania wymagają **innego modelu programowania** --
+      nie można po prostu wywoływać metod blokujących i oczekiwać, że wszystko zadziała.
+- **Podejście Javy**: zachowanie znanego **kodu w stylu blokującym**, ale
+  uczynienie samych wątków tanimi. Brak kolorowanych funkcji, brak adnotacji
+  async, brak nowej składni.
+- **Harmonogram JEP**:
+    - JEP 425: Podgląd w Java 19
+    - JEP 436: Drugi podgląd w Java 20
+    - JEP 444: Wersja finalna w **Java 21**
+- **Virtual threads** to wątki w trybie użytkownika planowane przez JVM,
+  a nie przez system operacyjny. JVM mapuje wiele virtual threads na małą
+  pulę **wątków nośnych** (carrier threads, ForkJoinPool). Gdy virtual thread
+  blokuje się (sleep, I/O, blokada), JVM **odmontowuje** go z wątku nośnego
+  i montuje inny virtual thread -- dzięki czemu wątek nośny nigdy nie jest bezczynny.
+- Rezultat: można tworzyć **miliony** virtual threads, z których każdy
+  może swobodnie się blokować, a JVM transparentnie multipleksuje je
+  na garść wątków systemu operacyjnego.
 */
 
 // ============================================================
-// Section 2: Creating Virtual Threads
+// Sekcja 2: Tworzenie virtual threads
 // ============================================================
 
 /*
-## Creating Virtual Threads
+## Tworzenie virtual threads
 
-- **Thread.ofVirtual()** returns a builder for virtual threads:
+- **Thread.ofVirtual()** zwraca builder dla virtual threads:
       Thread.ofVirtual().name("worker").start(() -> { ... });
-- **Thread.startVirtualThread(Runnable)** is a convenience shortcut:
+- **Thread.startVirtualThread(Runnable)** to wygodny skrót:
       Thread.startVirtualThread(() -> System.out.println("hello"));
-  This creates, starts, and returns a virtual thread in one call.
-- **Naming**: The builder supports .name("prefix-", startIndex) for
-  auto-numbered names: worker-0, worker-1, worker-2, ...
-- **Thread.ofPlatform()** is the symmetric API for platform threads:
+  Tworzy, uruchamia i zwraca virtual thread w jednym wywołaniu.
+- **Nazewnictwo**: Builder obsługuje .name("prefix-", startIndex) dla
+  automatycznie numerowanych nazw: worker-0, worker-1, worker-2, ...
+- **Thread.ofPlatform()** to symetryczne API dla wątków platformowych:
       Thread.ofPlatform().name("os-thread").start(() -> { ... });
-- **Thread.isVirtual()** returns true for virtual threads.
-- Virtual threads are **always daemon threads** -- they do not
-  prevent the JVM from exiting. Calling setDaemon(false) throws
-  an IllegalArgumentException.
-- **Thread priority has no effect** on virtual threads -- the JVM
-  scheduler ignores it (all virtual threads have NORM_PRIORITY).
-- **ThreadFactory**: Both builders expose .factory() to create a
-  ThreadFactory, which is useful with ExecutorService and other
-  concurrency utilities.
+- **Thread.isVirtual()** zwraca true dla virtual threads.
+- Virtual threads są **zawsze wątkami daemon** -- nie zapobiegają
+  zamknięciu JVM. Wywołanie setDaemon(false) rzuca
+  IllegalArgumentException.
+- **Priorytet wątku nie ma wpływu** na virtual threads -- planista JVM
+  go ignoruje (wszystkie virtual threads mają NORM_PRIORITY).
+- **ThreadFactory**: Oba buildery udostępniają .factory() do tworzenia
+  ThreadFactory, co jest przydatne z ExecutorService i innymi
+  narzędziami współbieżności.
 */
 
 // ============================================================
-// Section 3: Virtual Threads with Executors
+// Sekcja 3: Virtual threads z Executors
 // ============================================================
 
 /*
-## Virtual Threads with Executors
+## Virtual threads z Executors
 
-- **Executors.newVirtualThreadPerTaskExecutor()** creates an
-  ExecutorService that starts a new virtual thread for every
-  submitted task. This is the recommended way to use virtual
-  threads in server applications.
-- **Why pooling is counterproductive**: Virtual threads are so
-  cheap that pooling them (like a fixed thread pool) adds overhead
-  without benefit. Each task gets its own thread -- there is no
-  reuse needed because creation cost is negligible.
-- **AutoCloseable**: In Java 19+, ExecutorService extends
-  AutoCloseable. Using try-with-resources calls close(), which
-  waits for all submitted tasks to finish (like invoking
+- **Executors.newVirtualThreadPerTaskExecutor()** tworzy
+  ExecutorService, który uruchamia nowy virtual thread dla każdego
+  przesłanego zadania. Jest to zalecany sposób użycia virtual
+  threads w aplikacjach serwerowych.
+- **Dlaczego pooling jest nieproduktywny**: Virtual threads są tak
+  tanie, że tworzenie z nich puli (jak fixed thread pool) dodaje
+  narzut bez korzyści. Każde zadanie dostaje własny wątek -- nie ma
+  potrzeby ponownego użycia, ponieważ koszt tworzenia jest znikomy.
+- **AutoCloseable**: W Java 19+, ExecutorService rozszerza
+  AutoCloseable. Użycie try-with-resources wywołuje close(), które
+  czeka na zakończenie wszystkich przesłanych zadań (jak wywołanie
   shutdown() + awaitTermination()).
-- **ExecutorService.close()** blocks until all tasks complete.
-  This makes structured concurrency patterns easy -- submit work,
-  close the executor, and all results are ready.
-- **Performance comparison**: 10 tasks each sleeping 100ms:
-    - Virtual thread executor: ~100ms (all tasks run concurrently)
-    - Fixed thread pool(4): ~300ms (only 4 tasks at a time)
+- **ExecutorService.close()** blokuje do momentu zakończenia wszystkich zadań.
+  Dzięki temu wzorce structured concurrency są proste -- przesyłasz pracę,
+  zamykasz executor i wszystkie wyniki są gotowe.
+- **Porównanie wydajności**: 10 zadań, każde śpiące 100ms:
+    - Executor virtual threads: ~100ms (wszystkie zadania działają współbieżnie)
+    - Fixed thread pool(4): ~300ms (tylko 4 zadania naraz)
 */
 
 // ============================================================
-// Section 4: Scalability Demonstration
+// Sekcja 4: Demonstracja skalowalności
 // ============================================================
 
 /*
-## Scalability Demonstration
+## Demonstracja skalowalności
 
-- A virtual thread starts with an **initial stack of ~200 bytes**
-  (vs ~1 MB for a platform thread). The stack is stored on the
-  heap and grows/shrinks dynamically as needed.
-- The JVM can sustain **millions** of virtual threads simultaneously.
-  The bottleneck shifts from thread count to actual work and memory
-  for stack frames.
-- When a virtual thread **blocks** (sleep, I/O, lock acquisition),
-  the JVM unmounts its continuation from the carrier thread. The
-  carrier is immediately free to run another virtual thread.
-- **Sleeping is nearly free**: A sleeping virtual thread consumes
-  only heap memory for its frozen stack -- no OS thread is held.
-  This means 100,000 threads each sleeping 1 second complete in
-  about 1 second total, not 100,000 seconds.
-- Attempting the same with platform threads would require ~100 GB
-  of stack memory and would likely crash the JVM or the OS.
+- Virtual thread rozpoczyna z **początkowym stosem ~200 bajtów**
+  (vs ~1 MB dla wątku platformowego). Stos jest przechowywany na
+  stercie i dynamicznie rośnie/kurczy się w miarę potrzeb.
+- JVM może obsłużyć **miliony** virtual threads jednocześnie.
+  Wąskie gardło przesuwa się z liczby wątków na rzeczywistą pracę
+  i pamięć na ramki stosu.
+- Gdy virtual thread **blokuje się** (sleep, I/O, pozyskanie blokady),
+  JVM odmontowuje jego kontynuację z wątku nośnego. Wątek nośny
+  jest natychmiast wolny do uruchomienia innego virtual thread.
+- **Uśpienie jest prawie darmowe**: Uśpiony virtual thread zużywa
+  tylko pamięć sterty na swój zamrożony stos -- żaden wątek OS
+  nie jest zajęty. Oznacza to, że 100 000 wątków, każdy śpiący
+  1 sekundę, kończy pracę w około 1 sekundę łącznie, a nie 100 000 sekund.
+- Próba tego samego z wątkami platformowymi wymagałaby ~100 GB
+  pamięci stosu i prawdopodobnie spowodowałaby awarię JVM lub systemu operacyjnego.
 */
 
 // ============================================================
-// Section 5: Virtual Threads and Blocking I/O
+// Sekcja 5: Virtual threads i blokujące I/O
 // ============================================================
 
 /*
-## Virtual Threads and Blocking I/O
+## Virtual threads i blokujące I/O
 
-- The JVM intercepts blocking calls and **automatically unmounts**
-  the virtual thread from its carrier. The developer does not need
-  to do anything -- blocking code just works.
-- **Supported blocking points** (where unmounting happens):
+- JVM przechwytuje wywołania blokujące i **automatycznie odmontowuje**
+  virtual thread z jego wątku nośnego. Programista nie musi nic
+  robić -- kod blokujący po prostu działa.
+- **Obsługiwane punkty blokowania** (gdzie następuje odmontowanie):
     - Thread.sleep()
     - BlockingQueue.take() / put()
     - Lock.lock() (ReentrantLock)
-    - Socket read/write (java.net, java.nio channels in blocking mode)
+    - Odczyt/zapis gniazda (java.net, kanały java.nio w trybie blokującym)
     - Future.get()
     - CountDownLatch.await()
-    - Selector operations
-- **Continuation model**: When a virtual thread blocks, the JVM
-  saves its entire stack to the heap (a "continuation"). When the
-  blocking condition is resolved, the continuation is remounted
-  onto a carrier thread -- potentially a **different** carrier
-  than the original one.
-- This is **transparent to the developer**: your code looks like
-  normal sequential blocking code, but under the hood the JVM
-  is efficiently multiplexing thousands of virtual threads onto
-  a few OS threads.
-- **Simulated I/O**: In this demo we simulate database queries and
-  API calls with Thread.sleep(). In real applications, any blocking
-  I/O operation (JDBC, HTTP clients, file I/O) benefits the same way.
+    - Operacje Selector
+- **Model kontynuacji**: Gdy virtual thread blokuje się, JVM
+  zapisuje cały jego stos na stercie ("kontynuacja"). Gdy warunek
+  blokowania zostanie rozwiązany, kontynuacja jest ponownie montowana
+  na wątku nośnym -- potencjalnie na **innym** wątku nośnym
+  niż pierwotny.
+- Jest to **transparentne dla programisty**: kod wygląda jak
+  zwykły sekwencyjny kod blokujący, ale pod spodem JVM
+  efektywnie multipleksuje tysiące virtual threads na
+  kilku wątkach OS.
+- **Symulowane I/O**: W tym demo symulujemy zapytania bazodanowe i
+  wywołania API za pomocą Thread.sleep(). W prawdziwych aplikacjach każda
+  blokująca operacja I/O (JDBC, klienty HTTP, I/O plików) korzysta w ten sam sposób.
 */
 
 // ============================================================
-// Section 6: Best Practices and Pitfalls
+// Sekcja 6: Dobre praktyki i pułapki
 // ============================================================
 
 /*
-## Best Practices and Pitfalls
+## Dobre praktyki i pułapki
 
-- **Don't pool virtual threads**: Creating a fixed pool of virtual
-  threads defeats their purpose. Use newVirtualThreadPerTaskExecutor()
-  or Thread.startVirtualThread() -- one thread per task.
-- **Avoid `synchronized` blocks/methods**: A virtual thread inside a
-  synchronized block **pins** its carrier thread -- the carrier cannot
-  be reused by other virtual threads until the monitor is released.
-  This reduces concurrency and can cause performance degradation.
-- **Use ReentrantLock instead**: ReentrantLock is virtual-thread-
-  friendly. When a virtual thread blocks on lock.lock(), it properly
-  unmounts from the carrier.
-- **Pinning explained**: Pinning occurs when the JVM cannot unmount
-  a virtual thread. Two main causes:
-    - Inside a `synchronized` block or method
-    - Inside a native method or foreign function
-  The virtual thread still works correctly, but it holds the carrier
-  hostage until the pinning section completes.
-- **Thread-locals are wasteful**: Because you may have millions of
-  virtual threads, per-thread storage (ThreadLocal) can consume
-  excessive memory. Java 21 introduces **ScopedValue** (preview)
-  as a lightweight, immutable alternative.
-- **CPU-bound work is not helped**: Virtual threads shine when tasks
-  spend most of their time **blocking** (waiting for I/O). For
-  CPU-bound work, you are limited by the number of cores regardless
-  of thread type.
-- **Diagnostic flag**: -Djdk.tracePinnedThreads=short (or =full)
-  prints a stack trace whenever a virtual thread is pinned. Useful
-  during development and testing to find problematic synchronized
-  blocks.
+- **Nie twórz puli virtual threads**: Tworzenie stałej puli virtual
+  threads niweluje ich cel. Używaj newVirtualThreadPerTaskExecutor()
+  lub Thread.startVirtualThread() -- jeden wątek na zadanie.
+- **Unikaj bloków/metod `synchronized`**: Virtual thread wewnątrz
+  bloku synchronized **przypina** swój wątek nośny -- wątek nośny nie może
+  być ponownie użyty przez inne virtual threads dopóki monitor nie zostanie
+  zwolniony. Zmniejsza to współbieżność i może powodować degradację wydajności.
+- **Używaj ReentrantLock zamiast tego**: ReentrantLock jest przyjazny
+  dla virtual threads. Gdy virtual thread blokuje się na lock.lock(),
+  prawidłowo odmontowuje się z wątku nośnego.
+- **Wyjaśnienie przypinania (pinning)**: Przypinanie występuje, gdy JVM
+  nie może odmontować virtual thread. Dwie główne przyczyny:
+    - Wewnątrz bloku lub metody `synchronized`
+    - Wewnątrz metody natywnej lub funkcji obcej
+  Virtual thread nadal działa poprawnie, ale trzyma wątek nośny
+  jako zakładnika do momentu zakończenia sekcji przypinającej.
+- **Thread-locals są kosztowne**: Ponieważ możesz mieć miliony
+  virtual threads, przechowywanie per-wątek (ThreadLocal) może zużywać
+  nadmierną ilość pamięci. Java 21 wprowadza **ScopedValue** (podgląd)
+  jako lekką, niezmienną alternatywę.
+- **Praca CPU-bound nie jest wspomagana**: Virtual threads sprawdzają się,
+  gdy zadania spędzają większość czasu na **blokowaniu** (czekaniu na I/O).
+  Dla pracy CPU-bound jesteś ograniczony liczbą rdzeni niezależnie
+  od typu wątku.
+- **Flaga diagnostyczna**: -Djdk.tracePinnedThreads=short (lub =full)
+  wypisuje ślad stosu za każdym razem, gdy virtual thread jest przypięty.
+  Przydatne podczas programowania i testowania do znajdowania problematycznych
+  bloków synchronized.
 */
 
 public class VirtualThreads {
 
-    // ---- Section 6: Counter implementations for pinning demo ----
+    // ---- Sekcja 6: Implementacje liczników dla demo przypinania ----
 
     static class SynchronizedCounter {
         private int count = 0;
@@ -208,16 +208,16 @@ public class VirtualThreads {
     }
 
     // ============================================================
-    // Section 1: Introduction -- Why Virtual Threads
+    // Sekcja 1: Wprowadzenie -- Dlaczego virtual threads
     // ============================================================
 
     static void introductionWhyVirtualThreads() throws Exception {
         System.out.println("=== Section 1: Introduction -- Why Virtual Threads ===");
 
-        // Available processors (carrier pool size context)
+        // Dostępne procesory (kontekst rozmiaru puli wątków nośnych)
         System.out.println("Available processors (carrier pool size): " + Runtime.getRuntime().availableProcessors());
 
-        // Create a platform thread
+        // Tworzenie wątku platformowego
         System.out.println("\n--- Platform thread ---");
         var platformThread = Thread.ofPlatform().name("my-platform-thread").start(() -> {
             var t = Thread.currentThread();
@@ -227,7 +227,7 @@ public class VirtualThreads {
         });
         platformThread.join();
 
-        // Create a virtual thread
+        // Tworzenie virtual thread
         System.out.println("\n--- Virtual thread ---");
         var virtualThread = Thread.ofVirtual().name("my-virtual-thread").start(() -> {
             var t = Thread.currentThread();
@@ -239,20 +239,20 @@ public class VirtualThreads {
     }
 
     // ============================================================
-    // Section 2: Creating Virtual Threads
+    // Sekcja 2: Tworzenie virtual threads
     // ============================================================
 
     static void creatingVirtualThreads() throws Exception {
         System.out.println("\n=== Section 2: Creating Virtual Threads ===");
 
-        // startVirtualThread — convenience method
+        // startVirtualThread — metoda wygodna
         System.out.println("--- Thread.startVirtualThread() ---");
         var t1 = Thread.startVirtualThread(() -> {
             System.out.println("  startVirtualThread: " + Thread.currentThread());
         });
         t1.join();
 
-        // Named builder with auto-numbered names
+        // Nazwany builder z automatycznie numerowanymi nazwami
         System.out.println("\n--- Named builder with 5 threads ---");
         var builder = Thread.ofVirtual().name("worker-", 0);
         var threads = new ArrayList<Thread>();
@@ -275,7 +275,7 @@ public class VirtualThreads {
         factoryThread.start();
         factoryThread.join();
 
-        // Compare virtual vs platform thread properties
+        // Porównanie właściwości virtual vs platform thread
         System.out.println("\n--- Virtual vs Platform thread comparison ---");
         var virtual = Thread.ofVirtual().name("vt-demo").unstarted(() -> {});
         var platform = Thread.ofPlatform().name("pt-demo").unstarted(() -> {});
@@ -287,13 +287,13 @@ public class VirtualThreads {
     }
 
     // ============================================================
-    // Section 3: Virtual Threads with Executors
+    // Sekcja 3: Virtual threads z Executors
     // ============================================================
 
     static void virtualThreadsWithExecutors() throws Exception {
         System.out.println("\n=== Section 3: Virtual Threads with Executors ===");
 
-        // Virtual thread executor — 10 tasks sleeping 100ms each
+        // Executor virtual threads — 10 zadań śpiących po 100ms każde
         System.out.println("--- newVirtualThreadPerTaskExecutor: 10 tasks x 100ms sleep ---");
         var startVirtual = Instant.now();
         List<Future<String>> futures;
@@ -314,7 +314,7 @@ public class VirtualThreads {
         }
         System.out.println("  Virtual executor time: " + durationVirtual.toMillis() + "ms (expected ~100ms)");
 
-        // Fixed thread pool comparison — same 10 tasks
+        // Porównanie z fixed thread pool — te same 10 zadań
         System.out.println("\n--- newFixedThreadPool(4): same 10 tasks x 100ms sleep ---");
         var startFixed = Instant.now();
         List<Future<String>> fixedFutures;
@@ -334,7 +334,7 @@ public class VirtualThreads {
     }
 
     // ============================================================
-    // Section 4: Scalability Demonstration
+    // Sekcja 4: Demonstracja skalowalności
     // ============================================================
 
     static void scalabilityDemonstration() throws Exception {
@@ -361,13 +361,13 @@ public class VirtualThreads {
     }
 
     // ============================================================
-    // Section 5: Virtual Threads and Blocking I/O
+    // Sekcja 5: Virtual threads i blokujące I/O
     // ============================================================
 
     static void virtualThreadsAndBlockingIO() throws Exception {
         System.out.println("\n=== Section 5: Virtual Threads and Blocking I/O ===");
 
-        // Local record for simulated request
+        // Lokalny rekord dla symulowanego żądania
         record SimulatedRequest(int id, String dbResult, String apiResult, String carrierBefore, String carrierAfter) {}
 
         System.out.println("--- Simulated request pipeline: DB query (50ms) + API call (100ms) ---");
@@ -379,17 +379,17 @@ public class VirtualThreads {
         try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
             futures = IntStream.range(0, 500)
                     .mapToObj(i -> executor.submit(() -> {
-                        // Capture carrier thread before blocking
+                        // Przechwycenie wątku nośnego przed blokowaniem
                         String carrierBefore = Thread.currentThread().toString();
 
-                        // Simulate DB query
+                        // Symulacja zapytania do bazy danych
                         Thread.sleep(50);
                         String dbResult = "db-row-" + i;
 
-                        // Capture carrier thread after first block (may differ)
+                        // Przechwycenie wątku nośnego po pierwszym blokowaniu (może się różnić)
                         String carrierAfter = Thread.currentThread().toString();
 
-                        // Simulate API call
+                        // Symulacja wywołania API
                         Thread.sleep(100);
                         String apiResult = "api-response-" + i;
 
@@ -400,7 +400,7 @@ public class VirtualThreads {
 
         var duration = Duration.between(start, Instant.now());
 
-        // Show a few results and carrier thread changes
+        // Wyświetlenie kilku wyników i zmian wątku nośnego
         System.out.println("\n  Sample results (first 5):");
         int carrierChanges = 0;
         for (var future : futures) {
@@ -423,17 +423,17 @@ public class VirtualThreads {
     }
 
     // ============================================================
-    // Section 6: Best Practices and Pitfalls
+    // Sekcja 6: Dobre praktyki i pułapki
     // ============================================================
 
     static void bestPracticesAndPitfalls() throws Exception {
         System.out.println("\n=== Section 6: Best Practices and Pitfalls ===");
 
-        // ReentrantLock vs synchronized contention benchmark
+        // Benchmark porównujący ReentrantLock vs synchronized pod obciążeniem
         int threadCount = 1_000;
         int incrementsPerThread = 100;
 
-        // ReentrantLock-based counter
+        // Licznik oparty na ReentrantLock
         System.out.println("--- ReentrantLock vs synchronized: " + threadCount + " threads x " + incrementsPerThread + " increments ---");
 
         var lockCounter = new LockBasedCounter();
@@ -455,7 +455,7 @@ public class VirtualThreads {
                 + " (expected " + (threadCount * incrementsPerThread) + ")");
         System.out.println("  ReentrantLock time: " + durationLock.toMillis() + "ms");
 
-        // Synchronized counter
+        // Licznik synchronized
         var syncCounter = new SynchronizedCounter();
         var startSync = Instant.now();
 
@@ -476,7 +476,7 @@ public class VirtualThreads {
         System.out.println("  Synchronized time: " + durationSync.toMillis() + "ms");
         System.out.println("  Note: synchronized pins the carrier thread, reducing concurrency");
 
-        // CPU-bound work: virtual threads do not help
+        // Praca CPU-bound: virtual threads nie pomagają
         System.out.println("\n--- CPU-bound work: Fibonacci parity (virtual threads don't help) ---");
 
         var startCpu = Instant.now();
@@ -504,7 +504,7 @@ public class VirtualThreads {
         System.out.println("  CPU-bound work is limited by cores (" + Runtime.getRuntime().availableProcessors()
                 + "), not thread count");
 
-        // ScopedValue teaser
+        // Zapowiedź ScopedValue
         System.out.println("\n--- ScopedValue (preview in Java 21) ---");
         System.out.println("  ThreadLocal works but is wasteful with millions of virtual threads.");
         System.out.println("  ScopedValue (JEP 446) provides a lightweight, immutable alternative:");
@@ -513,14 +513,14 @@ public class VirtualThreads {
         System.out.println("  ScopedValues are inherited by child threads and are automatically cleaned up.");
     }
 
-    // Helper: naive recursive Fibonacci for CPU-bound demo
+    // Pomocnik: naiwne rekurencyjne Fibonacci dla demo CPU-bound
     static long fibonacci(int n) {
         if (n <= 1) return n;
         return fibonacci(n - 1) + fibonacci(n - 2);
     }
 
     // ============================================================
-    // Main -- run all sections
+    // Main -- uruchomienie wszystkich sekcji
     // ============================================================
 
     public static void main(String[] args) throws Exception {

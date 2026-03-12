@@ -3,218 +3,218 @@ package pl.training.jmodern.module02_java17;
 import java.util.*;
 
 // ============================================================
-// Section 1: Traditional Switch Problems
+// Sekcja 1: Problemy z tradycyjnym Switch
 // ============================================================
 
 /*
-## Traditional Switch Problems
+## Problemy z tradycyjnym Switch
 
-- The traditional `switch` statement in Java has been a source of
-  subtle bugs since Java 1.0. The most infamous issue is
-  **fall-through**: if you forget a `break`, execution silently
-  continues into the next case.
-- **Fall-through by default**: Unlike `if-else`, switch cases
-  fall through unless explicitly terminated with `break`. This
-  design was inherited from C/C++ and leads to hard-to-find bugs
-  because the compiler gives no warning.
-- **Statement-only**: Traditional switch is a **statement**, not
-  an **expression**. It cannot produce a value directly. To use
-  the result of a switch, you must declare a variable before the
-  switch and assign it inside each case — this is verbose and
-  error-prone (you might forget to assign in one branch).
-- **Limited types** (pre-Java 7): Before Java 7, switch only
-  worked with `byte`, `short`, `char`, `int`, and their wrapper
-  types. Java 7 added `String`, Java 5 added `enum`.
-- **JEP timeline**:
-    - JEP 325: Preview in Java 12 (switch expressions)
-    - JEP 354: Second preview in Java 13 (introduced `yield`)
-    - JEP 361: Finalized in Java 14
-- The new switch addresses all these problems: arrow syntax
-  eliminates fall-through, expression form returns values, and
-  `yield` handles multi-line blocks.
+- Tradycyjna instrukcja `switch` w Javie była źródłem
+  subtelnych błędów od Javy 1.0. Najbardziej znany problem to
+  **fall-through**: jeśli zapomnisz `break`, wykonanie cicho
+  przechodzi do następnego przypadku.
+- **Fall-through domyślnie**: W przeciwieństwie do `if-else`, przypadki switch
+  przechodzą dalej, chyba że zostaną jawnie zakończone `break`. Ten
+  wzorzec został odziedziczony z C/C++ i prowadzi do trudnych do znalezienia błędów,
+  ponieważ kompilator nie wyświetla żadnego ostrzeżenia.
+- **Tylko instrukcja**: Tradycyjny switch to **instrukcja**, a nie
+  **wyrażenie**. Nie może bezpośrednio produkować wartości. Aby użyć
+  wyniku switch, musisz zadeklarować zmienną przed switch
+  i przypisać ją wewnątrz każdego przypadku — to jest rozwlekłe i
+  podatne na błędy (możesz zapomnieć o przypisaniu w jednej gałęzi).
+- **Ograniczone typy** (przed Javą 7): Przed Javą 7 switch działał
+  tylko z `byte`, `short`, `char`, `int` i ich typami opakowującymi.
+  Java 7 dodała `String`, Java 5 dodała `enum`.
+- **Harmonogram JEP**:
+    - JEP 325: Podgląd w Javie 12 (wyrażenia switch)
+    - JEP 354: Drugi podgląd w Javie 13 (wprowadzono `yield`)
+    - JEP 361: Sfinalizowano w Javie 14
+- Nowy switch rozwiązuje wszystkie te problemy: składnia strzałkowa
+  eliminuje fall-through, forma wyrażeniowa zwraca wartości, a
+  `yield` obsługuje wieloliniowe bloki.
 */
 
 // ============================================================
-// Section 2: Arrow Labels and Expression Form
+// Sekcja 2: Etykiety strzałkowe i forma wyrażeniowa
 // ============================================================
 
 /*
-## Arrow Labels and Expression Form
+## Etykiety strzałkowe i forma wyrażeniowa
 
-- **Arrow labels** (`case X ->`) replace the colon-style labels
-  (`case X:`). With arrow labels, only the code to the right of
-  the arrow executes — there is **no fall-through**, ever.
-- **Switch as expression**: The entire switch can now be assigned
-  to a variable:
+- **Etykiety strzałkowe** (`case X ->`) zastępują etykiety z dwukropkiem
+  (`case X:`). Przy etykietach strzałkowych wykonuje się tylko kod
+  po prawej stronie strzałki — **nigdy nie ma fall-through**.
+- **Switch jako wyrażenie**: Cały switch może być teraz przypisany
+  do zmiennej:
       var result = switch (day) {
           case MONDAY -> "Start of week";
           case FRIDAY -> "Almost weekend";
           default -> "Midweek";
       };
-  Note the **semicolon after the closing brace** — this is
-  required because the switch is now an expression statement.
-- **`yield` for multi-line blocks**: When a case needs multiple
-  statements, use a block `{ ... }` and the `yield` keyword to
-  produce the value:
+  Zwróć uwagę na **średnik po klamrze zamykającej** — jest
+  wymagany, ponieważ switch jest teraz instrukcją wyrażeniową.
+- **`yield` dla wieloliniowych bloków**: Gdy przypadek wymaga wielu
+  instrukcji, użyj bloku `{ ... }` i słowa kluczowego `yield` aby
+  wygenerować wartość:
       case MONDAY -> {
           logger.info("Monday");
           yield "Start of week";
       }
-- **`yield` vs `return`**: `yield` exits the switch expression
-  with a value. `return` exits the enclosing method. Do not
-  confuse them — using `return` inside a switch expression will
-  return from the method, not from the switch.
-- **Arrow labels in switch statements**: You can also use arrow
-  labels in switch statements (not just expressions). Even without
-  returning a value, arrow labels prevent fall-through, making
-  the code safer.
-- **`var` and type inference**: The result of a switch expression
-  can be assigned using `var`, and the compiler infers the type
-  from the common type of all branches.
+- **`yield` vs `return`**: `yield` wychodzi z wyrażenia switch
+  z wartością. `return` wychodzi z otaczającej metody. Nie
+  myl ich — użycie `return` wewnątrz wyrażenia switch spowoduje
+  powrót z metody, nie ze switch.
+- **Etykiety strzałkowe w instrukcjach switch**: Możesz również używać
+  etykiet strzałkowych w instrukcjach switch (nie tylko wyrażeniach). Nawet bez
+  zwracania wartości, etykiety strzałkowe zapobiegają fall-through, co czyni
+  kod bezpieczniejszym.
+- **`var` i wnioskowanie typów**: Wynik wyrażenia switch
+  może być przypisany za pomocą `var`, a kompilator wnioskuje typ
+  na podstawie wspólnego typu wszystkich gałęzi.
 */
 
 // ============================================================
-// Section 3: Multiple Case Labels and Exhaustiveness
+// Sekcja 3: Wielokrotne etykiety przypadków i wyczerpywalność
 // ============================================================
 
 /*
-## Multiple Case Labels and Exhaustiveness
+## Wielokrotne etykiety przypadków i wyczerpywalność
 
-- **Multiple labels per case**: You can group multiple constants
-  in a single case using commas:
+- **Wiele etykiet na przypadek**: Możesz grupować wiele stałych
+  w jednym przypadku używając przecinków:
       case MONDAY, TUESDAY, WEDNESDAY -> "Weekday";
-  This replaces the old fall-through grouping pattern:
-      case MONDAY: case TUESDAY: case WEDNESDAY: // old way
-- **Exhaustiveness for enums**: When switching over an enum type
-  in an expression, the compiler checks that **all constants are
-  covered**. If they are, no `default` branch is needed:
+  To zastępuje stary wzorzec grupowania przez fall-through:
+      case MONDAY: case TUESDAY: case WEDNESDAY: // stary sposób
+- **Wyczerpywalność dla enum**: Przy przełączaniu na typie enum
+  w wyrażeniu, kompilator sprawdza, czy **wszystkie stałe są
+  pokryte**. Jeśli tak, gałąź `default` nie jest potrzebna:
       var label = switch (season) {
           case SPRING -> "Bloom";
           case SUMMER -> "Sun";
           case AUTUMN -> "Leaves";
           case WINTER -> "Snow";
       };
-  This is a significant safety advantage — if someone adds a new
-  enum constant later, the compiler will flag every switch that
-  doesn't handle it.
-- **`default` hides missing cases**: If you add a `default`
-  branch, the compiler stops checking for exhaustiveness. New
-  enum constants silently fall into `default`. For enums, prefer
-  covering all constants explicitly — use `default` only when
-  you intentionally want a catch-all.
-- **Exhaustiveness for non-enum types**: For `String`, `int`,
-  and other types, the compiler cannot verify exhaustiveness,
-  so a `default` branch is required in switch expressions.
+  To jest znacząca zaleta bezpieczeństwa — jeśli ktoś doda nową
+  stałą enum później, kompilator oznaczy każdy switch, który
+  jej nie obsługuje.
+- **`default` ukrywa brakujące przypadki**: Jeśli dodasz gałąź `default`,
+  kompilator przestaje sprawdzać wyczerpywalność. Nowe
+  stałe enum cicho trafiają do `default`. Dla enum preferuj
+  jawne pokrycie wszystkich stałych — używaj `default` tylko gdy
+  celowo chcesz mieć przypadek ogólny.
+- **Wyczerpywalność dla typów nie-enum**: Dla `String`, `int`
+  i innych typów kompilator nie może zweryfikować wyczerpywalności,
+  więc gałąź `default` jest wymagana w wyrażeniach switch.
 */
 
 // ============================================================
-// Section 4: Switch with Different Types
+// Sekcja 4: Switch z różnymi typami
 // ============================================================
 
 /*
-## Switch with Different Types
+## Switch z różnymi typami
 
-- **String switch** (since Java 7): Switch on String values
-  using `equals()` semantics. Useful for parsing commands,
-  HTTP methods, configuration keys.
-- **Integer switch**: Classic switch on `int`/`Integer` values.
-  At the bytecode level, the JVM uses `tableswitch` (for dense
-  ranges) or `lookupswitch` (for sparse values) — both are
-  O(1) or O(log n), much faster than chained if-else.
-- **Enum switch**: The most natural fit for switch. Enums have
-  a fixed set of constants, enabling exhaustiveness checks.
-- **`case null` handling** (Java 21+, JEP 441): Traditionally,
-  switching on `null` throws a `NullPointerException`. Starting
-  with Java 21, you can explicitly handle null:
+- **Switch na String** (od Javy 7): Przełączanie na wartościach String
+  używając semantyki `equals()`. Przydatne do parsowania poleceń,
+  metod HTTP, kluczy konfiguracji.
+- **Switch na liczbach całkowitych**: Klasyczny switch na wartościach `int`/`Integer`.
+  Na poziomie kodu bajtowego JVM używa `tableswitch` (dla gęstych
+  zakresów) lub `lookupswitch` (dla rzadkich wartości) — oba mają
+  złożoność O(1) lub O(log n), znacznie szybsze niż łańcuch if-else.
+- **Switch na enum**: Najbardziej naturalne zastosowanie switch. Enum mają
+  stały zbiór stałych, umożliwiając sprawdzanie wyczerpywalności.
+- **Obsługa `case null`** (Java 21+, JEP 441): Tradycyjnie,
+  przełączanie na `null` rzuca `NullPointerException`. Począwszy
+  od Javy 21, możesz jawnie obsłużyć null:
       case null -> "No value provided";
-  If no `case null` is present, the old NPE behavior is preserved.
-- **Type patterns** (Java 21+, JEP 441): Switch can match on
-  types, combining `instanceof` and cast in a single step:
+  Jeśli nie ma `case null`, zachowane jest stare zachowanie NPE.
+- **Wzorce typów** (Java 21+, JEP 441): Switch może dopasowywać
+  typy, łącząc `instanceof` i rzutowanie w jednym kroku:
       case String s -> "String: " + s;
       case Integer i -> "Integer: " + i;
-  This is called **pattern matching for switch** and was previewed
-  from Java 17 through Java 20, finalized in Java 21.
+  Nazywa się to **dopasowywaniem wzorców dla switch** i było
+  w podglądzie od Javy 17 do Javy 20, sfinalizowane w Javie 21.
 */
 
 // ============================================================
-// Section 5: Practical Patterns
+// Sekcja 5: Wzorce praktyczne
 // ============================================================
 
 /*
-## Practical Patterns
+## Wzorce praktyczne
 
-- **Switch in stream pipelines**: Switch expressions work
-  beautifully inside `.map()`, `.filter()`, and other stream
-  operations because they are expressions that return a value:
+- **Switch w potokach Stream**: Wyrażenia switch działają
+  doskonale wewnątrz `.map()`, `.filter()` i innych operacji
+  Stream, ponieważ są wyrażeniami zwracającymi wartość:
       list.stream()
           .map(s -> switch (s.status()) { ... })
           .toList();
-- **Factory methods**: Switch expressions are ideal for factory
-  patterns — mapping a discriminator to an object:
+- **Metody fabrykujące**: Wyrażenia switch są idealne do wzorców
+  fabrykujących — mapowania dyskryminatora na obiekt:
       static Shape create(String type) {
           return switch (type) { ... };
       }
-- **Command dispatch**: Use switch to dispatch on sealed types
-  or enums representing commands, events, or messages. This
-  replaces verbose if-else chains or the visitor pattern.
-- **Mapping/conversion**: Switch expressions naturally express
-  value-to-value mappings, like enum-to-string, status-to-color,
-  or code-to-message conversions.
-- **Nested switch**: Switch expressions can appear inside other
-  switch expressions for multi-dimensional dispatch. Use this
-  sparingly — if nesting gets deep, consider extracting helper
-  methods.
+- **Dispatch poleceń**: Użyj switch do dispatchowania na sealed typach
+  lub enum reprezentujących polecenia, zdarzenia lub wiadomości. To
+  zastępuje rozwlekłe łańcuchy if-else lub wzorzec visitor.
+- **Mapowanie/konwersja**: Wyrażenia switch naturalnie wyrażają
+  mapowania wartość-na-wartość, jak enum-na-string, status-na-kolor,
+  czy konwersje kod-na-wiadomość.
+- **Zagnieżdżony switch**: Wyrażenia switch mogą pojawiać się wewnątrz innych
+  wyrażeń switch dla wielowymiarowego dispatchowania. Używaj tego
+  oszczędnie — jeśli zagnieżdżanie staje się głębokie, rozważ wyodrębnienie
+  metod pomocniczych.
 */
 
 // ============================================================
-// Section 6: Switch Expressions vs If-Else
+// Sekcja 6: Wyrażenia Switch vs If-Else
 // ============================================================
 
 /*
-## Switch Expressions vs If-Else
+## Wyrażenia Switch vs If-Else
 
-- **When to use switch**:
-    - Matching a single variable against discrete values
-    - Enum dispatch (exhaustiveness guaranteed)
-    - Replacing long if-else chains that compare the same variable
-    - When you need an expression that produces a value
-- **When to use if-else**:
-    - Range checks (`x > 10 && x < 20`) — switch cannot do ranges
-    - Complex boolean conditions involving multiple variables
-    - Null checks combined with method calls
-    - Conditions that are not equality-based
-- **Performance**: At the bytecode level, `switch` on integers
-  uses `tableswitch` (O(1) jump table for dense ranges) or
-  `lookupswitch` (O(log n) binary search for sparse values).
-  Chained if-else compiles to sequential comparisons (O(n)).
-  For enums and integers, switch is faster.
-- **Readability**: Switch expressions make the structure explicit:
-  "this variable can be one of these values, and for each we do
-  this." If-else chains obscure this pattern.
-- **Migration guidance**: Converting old switch statements to
-  new expressions is mostly mechanical:
-    1. Remove `break` statements
-    2. Replace `:` with `->`
-    3. Group fall-through cases with commas
-    4. Assign the switch to a variable (expression form)
-    5. Replace local variable assignment with `yield` if needed
+- **Kiedy używać switch**:
+    - Dopasowywanie pojedynczej zmiennej do dyskretnych wartości
+    - Dispatch na enum (gwarantowana wyczerpywalność)
+    - Zastępowanie długich łańcuchów if-else porównujących tę samą zmienną
+    - Gdy potrzebujesz wyrażenia produkującego wartość
+- **Kiedy używać if-else**:
+    - Sprawdzanie zakresów (`x > 10 && x < 20`) — switch nie obsługuje zakresów
+    - Złożone warunki logiczne obejmujące wiele zmiennych
+    - Sprawdzanie null w połączeniu z wywołaniami metod
+    - Warunki nieoparte na równości
+- **Wydajność**: Na poziomie kodu bajtowego `switch` na liczbach całkowitych
+  używa `tableswitch` (tablica skoków O(1) dla gęstych zakresów) lub
+  `lookupswitch` (wyszukiwanie binarne O(log n) dla rzadkich wartości).
+  Łańcuchy if-else kompilują się do sekwencyjnych porównań (O(n)).
+  Dla enum i liczb całkowitych switch jest szybszy.
+- **Czytelność**: Wyrażenia switch czynią strukturę jawną:
+  "ta zmienna może mieć jedną z tych wartości i dla każdej robimy
+  to." Łańcuchy if-else zaciemniają ten wzorzec.
+- **Wskazówki migracyjne**: Konwersja starych instrukcji switch na
+  nowe wyrażenia jest w większości mechaniczna:
+    1. Usuń instrukcje `break`
+    2. Zamień `:` na `->`
+    3. Zgrupuj przypadki fall-through przecinkami
+    4. Przypisz switch do zmiennej (forma wyrażeniowa)
+    5. Zamień przypisanie zmiennej lokalnej na `yield` jeśli potrzeba
 */
 
 public class SwitchExpressions {
 
-    // ---- Section 1: Season enum ----
+    // ---- Sekcja 1: Enum Season ----
 
     enum Season { SPRING, SUMMER, AUTUMN, WINTER }
 
-    // ---- Section 2: Day enum ----
+    // ---- Sekcja 2: Enum Day ----
 
     enum Day { MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY, SATURDAY, SUNDAY }
 
-    // ---- Section 3: Priority enum ----
+    // ---- Sekcja 3: Enum Priority ----
 
     enum Priority { LOW, MEDIUM, HIGH, CRITICAL }
 
-    // ---- Section 4: HttpStatus enum with code field ----
+    // ---- Sekcja 4: Enum HttpStatus z polem code ----
 
     enum HttpStatus {
         OK(200), CREATED(201), BAD_REQUEST(400), NOT_FOUND(404), INTERNAL_ERROR(500);
@@ -224,7 +224,7 @@ public class SwitchExpressions {
         int code() { return code; }
     }
 
-    // ---- Section 5: Command sealed interface ----
+    // ---- Sekcja 5: Zapieczętowany interfejs Command ----
 
     sealed interface Command permits Login, Logout, Purchase, Refund {}
     record Login(String username) implements Command {}
@@ -233,13 +233,13 @@ public class SwitchExpressions {
     record Refund(String orderId, double amount) implements Command {}
 
     // ============================================================
-    // Section 1: Traditional Switch Problems
+    // Sekcja 1: Problemy z tradycyjnym Switch
     // ============================================================
 
     static void traditionalSwitchProblems() {
         System.out.println("=== Section 1: Traditional Switch Problems ===");
 
-        // Old-style switch with break — counting season days
+        // Stary styl switch z break — zliczanie dni pory roku
         System.out.println("--- Old-style switch with break ---");
         Season season = Season.SUMMER;
         int days;
@@ -262,7 +262,7 @@ public class SwitchExpressions {
         }
         System.out.println(season + " has " + days + " days");
 
-        // Fall-through bug demonstration
+        // Demonstracja błędu fall-through
         System.out.println("\n--- Fall-through bug demonstration ---");
         System.out.println("Intentional fall-through (missing break on SPRING and SUMMER):");
         for (Season s : Season.values()) {
@@ -279,7 +279,7 @@ public class SwitchExpressions {
             }
         }
 
-        // Old-style: returning a value requires a variable
+        // Stary styl: zwracanie wartości wymaga zmiennej
         System.out.println("\n--- Old-style: variable before switch ---");
         Day day = Day.SATURDAY;
         String dayType;
@@ -301,7 +301,7 @@ public class SwitchExpressions {
         }
         System.out.println(day + " is a " + dayType);
 
-        // Teaser: same logic with arrow syntax (preview of Section 2)
+        // Zapowiedź: ta sama logika ze składnią strzałkową (podgląd Sekcji 2)
         System.out.println("\n--- New arrow syntax teaser ---");
         var dayTypeNew = switch (day) {
             case MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY -> "Weekday";
@@ -311,7 +311,7 @@ public class SwitchExpressions {
     }
 
     // ============================================================
-    // Section 2: Arrow Labels and Expression Form
+    // Sekcja 2: Etykiety strzałkowe i forma wyrażeniowa
     // ============================================================
 
     static String dayCategory(Day day) {
@@ -326,7 +326,7 @@ public class SwitchExpressions {
     static void arrowLabelsAndExpressionForm() {
         System.out.println("\n=== Section 2: Arrow Labels and Expression Form ===");
 
-        // Day → description mapping with arrow syntax
+        // Mapowanie Day → opis ze składnią strzałkową
         System.out.println("--- Day descriptions with arrow syntax ---");
         for (Day day : Day.values()) {
             var description = switch (day) {
@@ -341,7 +341,7 @@ public class SwitchExpressions {
             System.out.println("  " + day + " → " + description);
         }
 
-        // Switch expression with var
+        // Wyrażenie switch z var
         System.out.println("\n--- Switch expression assigned to var ---");
         Season season = Season.WINTER;
         var avgTemp = switch (season) {
@@ -352,7 +352,7 @@ public class SwitchExpressions {
         };
         System.out.println(season + " average temperature: " + avgTemp + "°C");
 
-        // yield in multi-line block
+        // yield w wieloliniowym bloku
         System.out.println("\n--- yield in multi-line block ---");
         var seasonReport = switch (season) {
             case SPRING -> {
@@ -378,7 +378,7 @@ public class SwitchExpressions {
         };
         System.out.println(season + ": " + seasonReport);
 
-        // Switch expression in return statement of helper method
+        // Wyrażenie switch w instrukcji return metody pomocniczej
         System.out.println("\n--- Switch expression in return statement ---");
         for (Day day : Day.values()) {
             System.out.println("  " + day + " → " + dayCategory(day));
@@ -386,13 +386,13 @@ public class SwitchExpressions {
     }
 
     // ============================================================
-    // Section 3: Multiple Case Labels and Exhaustiveness
+    // Sekcja 3: Wielokrotne etykiety przypadków i wyczerpywalność
     // ============================================================
 
     static void multipleCaseLabelsAndExhaustiveness() {
         System.out.println("\n=== Section 3: Multiple Case Labels and Exhaustiveness ===");
 
-        // Priority grouping: LOW+MEDIUM / HIGH+CRITICAL
+        // Grupowanie priorytetów: LOW+MEDIUM / HIGH+CRITICAL
         System.out.println("--- Priority grouping ---");
         for (Priority p : Priority.values()) {
             var response = switch (p) {
@@ -402,7 +402,7 @@ public class SwitchExpressions {
             System.out.println("  " + p + " → " + response);
         }
 
-        // Day weekday/weekend with comma grouping
+        // Dzień roboczy/weekend z grupowaniem przecinkowym
         System.out.println("\n--- Weekday/weekend with comma grouping ---");
         for (Day day : Day.values()) {
             var type = switch (day) {
@@ -412,7 +412,7 @@ public class SwitchExpressions {
             System.out.println("  " + day + " → " + type);
         }
 
-        // Exhaustive Season switch — no default needed
+        // Wyczerpujący switch na Season — nie potrzeba default
         System.out.println("\n--- Exhaustive Season switch (no default) ---");
         for (Season s : Season.values()) {
             var emoji = switch (s) {
@@ -423,11 +423,11 @@ public class SwitchExpressions {
             };
             System.out.println("  " + s + " → " + emoji);
         }
-        // If someone adds a 5th season, the compiler will flag every
-        // switch expression that doesn't handle it — this is the key
-        // advantage over using a default branch.
+        // Jeśli ktoś doda 5. porę roku, kompilator oznaczy każde
+        // wyrażenie switch, które jej nie obsługuje — to jest kluczowa
+        // zaleta w porównaniu z użyciem gałęzi default.
 
-        // Priority with detailed handling
+        // Priorytet ze szczegółową obsługą
         System.out.println("\n--- Priority with detailed response times ---");
         for (Priority p : Priority.values()) {
             var responseTime = switch (p) {
@@ -441,13 +441,13 @@ public class SwitchExpressions {
     }
 
     // ============================================================
-    // Section 4: Switch with Different Types
+    // Sekcja 4: Switch z różnymi typami
     // ============================================================
 
     static void switchWithDifferentTypes() {
         System.out.println("\n=== Section 4: Switch with Different Types ===");
 
-        // String switch for HTTP methods
+        // Switch na String dla metod HTTP
         System.out.println("--- String switch: HTTP methods ---");
         List<String> methods = List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS");
         for (String method : methods) {
@@ -462,7 +462,7 @@ public class SwitchExpressions {
             System.out.println("  " + method + " → " + description);
         }
 
-        // Integer switch for month → quarter
+        // Switch na liczbie całkowitej: miesiąc → kwartał
         System.out.println("\n--- Integer switch: month to quarter ---");
         for (int month = 1; month <= 12; month++) {
             var quarter = switch (month) {
@@ -475,7 +475,7 @@ public class SwitchExpressions {
             System.out.println("  Month " + month + " → " + quarter);
         }
 
-        // Enum switch: HttpStatus → message
+        // Switch na enum: HttpStatus → wiadomość
         System.out.println("\n--- Enum switch: HttpStatus to message ---");
         for (HttpStatus status : HttpStatus.values()) {
             var message = switch (status) {
@@ -488,7 +488,7 @@ public class SwitchExpressions {
             System.out.println("  " + status.code() + " " + status + " → " + message);
         }
 
-        // Null handling with case null (Java 21+)
+        // Obsługa null z case null (Java 21+)
         System.out.println("\n--- Null handling with case null (Java 21+) ---");
         List<String> values = new ArrayList<>();
         values.add("hello");
@@ -504,7 +504,7 @@ public class SwitchExpressions {
             System.out.println("  \"" + value + "\" → " + result);
         }
 
-        // Type pattern switch on Object (Java 21+)
+        // Switch ze wzorcem typów na Object (Java 21+)
         System.out.println("\n--- Type pattern switch on Object (Java 21+) ---");
         List<Object> objects = List.of(42, "Hello", 3.14, true, List.of(1, 2, 3));
         for (Object obj : objects) {
@@ -520,7 +520,7 @@ public class SwitchExpressions {
     }
 
     // ============================================================
-    // Section 5: Practical Patterns
+    // Sekcja 5: Wzorce praktyczne
     // ============================================================
 
     static String seasonActivity(Season season) {
@@ -544,7 +544,7 @@ public class SwitchExpressions {
     static void practicalPatterns() {
         System.out.println("\n=== Section 5: Practical Patterns ===");
 
-        // Switch in stream .map()
+        // Switch w potoku Stream .map()
         System.out.println("--- Switch in stream pipeline ---");
         var seasons = List.of(Season.SPRING, Season.SUMMER, Season.AUTUMN, Season.WINTER);
         var activities = seasons.stream()
@@ -557,7 +557,7 @@ public class SwitchExpressions {
                 .toList();
         activities.forEach(a -> System.out.println("  " + a));
 
-        // Stream with switch for filtering and mapping
+        // Stream z switch do filtrowania i mapowania
         System.out.println("\n--- Stream filter + switch mapping ---");
         var days = List.of(Day.values());
         var workdaySchedule = days.stream()
@@ -576,7 +576,7 @@ public class SwitchExpressions {
                 .toList();
         workdaySchedule.forEach(s -> System.out.println("  " + s));
 
-        // Command dispatch on sealed interface
+        // Dispatch poleceń na zapieczętowanym interfejsie
         System.out.println("\n--- Command dispatch ---");
         List<Command> commands = List.of(
                 new Login("alice"),
@@ -589,13 +589,13 @@ public class SwitchExpressions {
             System.out.println("  " + processCommand(cmd));
         }
 
-        // Season → activity conversion helper
+        // Konwersja Season → aktywność (metoda pomocnicza)
         System.out.println("\n--- Season activity suggestions ---");
         for (Season s : Season.values()) {
             System.out.println("  " + s + " → " + seasonActivity(s));
         }
 
-        // Nested switch: season + priority → scheduling
+        // Zagnieżdżony switch: pora roku + priorytet → planowanie
         System.out.println("\n--- Nested switch: season + priority scheduling ---");
         var testCases = List.of(
                 new Object[]{Season.SUMMER, Priority.CRITICAL},
@@ -628,7 +628,7 @@ public class SwitchExpressions {
     }
 
     // ============================================================
-    // Section 6: Switch Expressions vs If-Else
+    // Sekcja 6: Wyrażenia Switch vs If-Else
     // ============================================================
 
     static String classifySeason(Season season) {
@@ -650,11 +650,11 @@ public class SwitchExpressions {
     static void switchExpressionsVsIfElse() {
         System.out.println("\n=== Section 6: Switch Expressions vs If-Else ===");
 
-        // Side-by-side: if-else vs switch for the same logic
+        // Porównanie obok siebie: if-else vs switch dla tej samej logiki
         System.out.println("--- Side-by-side comparison ---");
         int statusCode = 404;
 
-        // If-else approach
+        // Podejście if-else
         String messageIfElse;
         if (statusCode == 200) {
             messageIfElse = "OK";
@@ -671,7 +671,7 @@ public class SwitchExpressions {
         }
         System.out.println("  if-else: " + statusCode + " → " + messageIfElse);
 
-        // Switch approach
+        // Podejście switch
         var messageSwitch = switch (statusCode) {
             case 200 -> "OK";
             case 201 -> "Created";
@@ -682,11 +682,11 @@ public class SwitchExpressions {
         };
         System.out.println("  switch:  " + statusCode + " → " + messageSwitch);
 
-        // Example where if-else is better: range check
+        // Przykład, gdzie if-else jest lepszy: sprawdzanie zakresów
         System.out.println("\n--- Where if-else wins: range checks ---");
         List<Integer> scores = List.of(95, 82, 71, 55, 38);
         for (int score : scores) {
-            // Switch cannot express ranges — if-else is the right tool here
+            // Switch nie obsługuje zakresów — if-else jest tu właściwym narzędziem
             String grade;
             if (score >= 90) {
                 grade = "A";
@@ -702,7 +702,7 @@ public class SwitchExpressions {
             System.out.println("  Score " + score + " → Grade " + grade);
         }
 
-        // Example where switch wins: enum dispatch
+        // Przykład, gdzie switch wygrywa: dispatch na enum
         System.out.println("\n--- Where switch wins: enum dispatch ---");
         for (Season s : Season.values()) {
             System.out.println("  " + s + " → " + classifySeason(s));
@@ -711,11 +711,11 @@ public class SwitchExpressions {
             System.out.println("  " + p + " → " + priorityLabel(p));
         }
 
-        // Old → new refactoring demonstration
+        // Demonstracja refaktoryzacji ze starego na nowy styl
         System.out.println("\n--- Old-style to new-style refactoring ---");
         Day day = Day.WEDNESDAY;
 
-        // OLD style (verbose, error-prone)
+        // STARY styl (rozwlekły, podatny na błędy)
         String oldResult;
         switch (day) {
             case MONDAY:
@@ -734,7 +734,7 @@ public class SwitchExpressions {
                 break;
         }
 
-        // NEW style (concise, safe)
+        // NOWY styl (zwięzły, bezpieczny)
         var newResult = switch (day) {
             case MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY -> "Workday";
             case SATURDAY, SUNDAY -> "Weekend";
@@ -744,7 +744,7 @@ public class SwitchExpressions {
         System.out.println("  New style: " + day + " → " + newResult);
         System.out.println("  Both produce the same result: " + oldResult.equals(newResult));
 
-        // Performance note
+        // Uwaga o wydajności
         System.out.println("\n--- Performance note ---");
         System.out.println("  Switch on int/enum uses tableswitch/lookupswitch bytecode");
         System.out.println("  → O(1) jump table for dense values, O(log n) binary search for sparse");
@@ -753,7 +753,7 @@ public class SwitchExpressions {
     }
 
     // ============================================================
-    // Main — run all sections
+    // Main — uruchomienie wszystkich sekcji
     // ============================================================
 
     public static void main(String[] args) {

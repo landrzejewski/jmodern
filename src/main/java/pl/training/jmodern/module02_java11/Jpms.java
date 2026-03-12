@@ -13,52 +13,52 @@ import java.util.spi.ToolProvider;
 import java.util.stream.*;
 
 // ============================================================
-// Section 1: Introduction to JPMS — Why Modules?
+// Sekcja 1: Wprowadzenie do JPMS — Dlaczego moduły?
 // ============================================================
 
 /*
-## Introduction to JPMS — Why Modules?
+## Wprowadzenie do JPMS — Dlaczego moduły?
 
-- **Classpath problems** — the Java class path was the only mechanism
-  for locating types for nearly 20 years, and it had serious flaws:
-    - **JAR hell**: duplicate classes from different JARs, version
-      conflicts, missing transitive dependencies — all detected only
-      at runtime with `NoClassDefFoundError` or `ClassNotFoundException`.
-    - **No encapsulation beyond public/package-private**: any public
-      class in a JAR was accessible to every other JAR on the classpath.
-      Internal implementation details (e.g., `sun.misc.Unsafe`) leaked
-      across library boundaries.
-    - **No explicit dependencies**: a JAR could not declare which other
-      JARs it required. Tools and developers had to guess the dependency
-      graph, leading to "classpath ordering" bugs.
-- **Project Jigsaw** (JSR 376) set out to fix these with JPMS:
-    - **Reliable configuration** — modules declare explicit dependencies
-      via `requires` directives, checked at both compile time and JVM
-      startup. Missing dependencies fail fast rather than at first use.
-    - **Strong encapsulation** — only packages explicitly `exports`-ed
-      are accessible to other modules. Internal packages are hidden,
-      even if their classes are public.
-    - **Scalable platform** — the JDK itself was modularized into ~70
-      modules (`java.base`, `java.sql`, `java.net.http`, etc.). Before
-      Java 9, the entire `rt.jar` (~65 MB) was loaded even for a
-      "Hello World" program.
-    - **Improved security and performance** — smaller attack surface
-      (unused modules are not loaded), faster startup (the JVM resolves
-      only required modules), and `jlink` can create custom runtime
-      images as small as ~30 MB.
-- **Timeline**:
-    - Java 9 (September 2017) — introduced the module system.
-    - Java 11 (September 2018) — first LTS release with JPMS fully
-      baked and stable. This is where most enterprises adopted modules.
-- **What is a module?** A named, self-describing collection of packages.
-  The descriptor is a special file `module-info.java` placed at the
-  source root (e.g., `src/module-info.java`). It compiles to
-  `module-info.class` in the root of the JAR.
-- **JDK modularization**: every JDK class belongs to a named module.
-  `java.base` is the foundational module — it is implicitly required
-  by all other modules (like `java.lang.Object` being the root class).
+- **Problemy classpath** — ścieżka klas Java była jedynym mechanizmem
+  lokalizowania typów przez prawie 20 lat i miała poważne wady:
+    - **Piekło JARów**: zduplikowane klasy z różnych JARów, konflikty
+      wersji, brakujące zależności przechodnie — wszystko wykrywane dopiero
+      w czasie wykonania z `NoClassDefFoundError` lub `ClassNotFoundException`.
+    - **Brak enkapsulacji poza public/package-private**: każda publiczna
+      klasa w JARze była dostępna dla każdego innego JARa na classpath.
+      Wewnętrzne szczegóły implementacji (np. `sun.misc.Unsafe`) wyciekały
+      poza granice bibliotek.
+    - **Brak jawnych zależności**: JAR nie mógł zadeklarować, których innych
+      JARów wymaga. Narzędzia i programiści musieli zgadywać graf
+      zależności, co prowadziło do błędów „kolejności classpath".
+- **Project Jigsaw** (JSR 376) postawił sobie za cel naprawienie tego za pomocą JPMS:
+    - **Niezawodna konfiguracja** — moduły deklarują jawne zależności
+      za pomocą dyrektyw `requires`, sprawdzane zarówno w czasie kompilacji, jak i przy
+      uruchomieniu JVM. Brakujące zależności powodują szybki błąd zamiast przy pierwszym użyciu.
+    - **Silna enkapsulacja** — tylko pakiety jawnie oznaczone jako `exports`
+      są dostępne dla innych modułów. Wewnętrzne pakiety są ukryte,
+      nawet jeśli ich klasy są publiczne.
+    - **Skalowalna platforma** — samo JDK zostało zmodularyzowane na ~70
+      modułów (`java.base`, `java.sql`, `java.net.http` itp.). Przed
+      Java 9 cały `rt.jar` (~65 MB) był ładowany nawet dla programu
+      „Hello World".
+    - **Poprawione bezpieczeństwo i wydajność** — mniejsza powierzchnia ataku
+      (nieużywane moduły nie są ładowane), szybsze uruchamianie (JVM rozwiązuje
+      tylko wymagane moduły), a `jlink` może tworzyć niestandardowe obrazy
+      runtime tak małe jak ~30 MB.
+- **Oś czasu**:
+    - Java 9 (wrzesień 2017) — wprowadzenie systemu modułów.
+    - Java 11 (wrzesień 2018) — pierwsze wydanie LTS z w pełni
+      dojrzałym i stabilnym JPMS. To tutaj większość przedsiębiorstw przyjęła moduły.
+- **Czym jest moduł?** Nazwana, samoopisująca się kolekcja pakietów.
+  Deskryptor to specjalny plik `module-info.java` umieszczony w korzeniu
+  źródeł (np. `src/module-info.java`). Kompiluje się do
+  `module-info.class` w korzeniu JARa.
+- **Modularyzacja JDK**: każda klasa JDK należy do nazwanego modułu.
+  `java.base` jest modułem fundamentalnym — jest niejawnie wymagany
+  przez wszystkie inne moduły (jak `java.lang.Object` będący klasą bazową).
 
-  Examples:
+  Przykłady:
     - `java.lang.String` → `java.base`
     - `java.sql.Connection` → `java.sql`
     - `java.net.http.HttpClient` → `java.net.http`
@@ -66,83 +66,83 @@ import java.util.stream.*;
 */
 
 // ============================================================
-// Section 2: Module Descriptor (module-info.java) Syntax
+// Sekcja 2: Deskryptor modułu (module-info.java) — składnia
 // ============================================================
 
 /*
-## Module Descriptor (module-info.java) Syntax
+## Deskryptor modułu (module-info.java) — składnia
 
-A module descriptor is a `module-info.java` file at the source root.
-It declares the module's name, dependencies, and exported packages.
-Below is a comprehensive syntax reference with examples:
+Deskryptor modułu to plik `module-info.java` w korzeniu źródeł.
+Deklaruje nazwę modułu, zależności i eksportowane pakiety.
+Poniżej znajduje się kompletna referencyjna składnia z przykładami:
 
-    // Basic module declaration
+    // Podstawowa deklaracja modułu
     module com.example.myapp {
     }
 
-    // Declares a dependency — checked at compile time AND JVM startup.
-    // If java.sql is missing from the module graph, the JVM refuses to start.
+    // Deklaruje zależność — sprawdzana w czasie kompilacji ORAZ przy uruchomieniu JVM.
+    // Jeśli java.sql brakuje w grafie modułów, JVM odmówi uruchomienia.
     module com.example.myapp {
         requires java.sql;
     }
 
-    // Transitive dependency (implied readability).
-    // Any module that requires com.example.myapp automatically gets
-    // access to java.logging — no need to require it separately.
+    // Zależność przechodnia (implikowana czytelność).
+    // Każdy moduł wymagający com.example.myapp automatycznie uzyskuje
+    // dostęp do java.logging — nie trzeba go wymagać osobno.
     module com.example.myapp {
         requires transitive java.logging;
     }
 
-    // Compile-time only dependency (optional at runtime).
-    // Useful for annotation processors, compile-time checks, etc.
+    // Zależność tylko na czas kompilacji (opcjonalna w czasie wykonania).
+    // Przydatna dla procesorów adnotacji, sprawdzeń kompilacji itp.
     module com.example.myapp {
         requires static java.compiler;
     }
 
-    // Exports a package — makes it accessible to ALL other modules.
-    // Only exported packages are visible; everything else is hidden.
+    // Eksportuje pakiet — czyni go dostępnym dla WSZYSTKICH innych modułów.
+    // Tylko eksportowane pakiety są widoczne; wszystko inne jest ukryte.
     module com.example.myapp {
         exports com.example.api;
     }
 
-    // Qualified export — accessible ONLY to specified modules.
-    // Useful for "friend" access between your own modules.
+    // Kwalifikowany eksport — dostępny TYLKO dla wskazanych modułów.
+    // Przydatny dla „zaprzyjaźnionego" dostępu między własnymi modułami.
     module com.example.myapp {
         exports com.example.internal to com.example.tests;
     }
 
-    // Opens a package for deep reflection (setAccessible(true)).
-    // Needed by frameworks like Jackson, Hibernate, Spring that use
-    // reflection to access private fields.
+    // Otwiera pakiet dla głębokiej refleksji (setAccessible(true)).
+    // Wymagane przez frameworki takie jak Jackson, Hibernate, Spring, które używają
+    // refleksji do dostępu do prywatnych pól.
     module com.example.myapp {
         opens com.example.model;
     }
 
-    // Qualified opens — allows reflection only from specific modules.
+    // Kwalifikowane otwarcie — pozwala na refleksję tylko z określonych modułów.
     module com.example.myapp {
         opens com.example.model to com.fasterxml.jackson.databind;
     }
 
-    // Open module — opens ALL packages for reflection.
-    // Convenient during migration but weakens encapsulation.
+    // Moduł otwarty — otwiera WSZYSTKIE pakiety dla refleksji.
+    // Wygodne podczas migracji, ale osłabia enkapsulację.
     open module com.example.myapp {
         exports com.example.api;
     }
 
-    // Service provider — declares that this module provides an
-    // implementation for a service interface.
+    // Dostawca usług — deklaruje, że ten moduł dostarcza
+    // implementację interfejsu usługi.
     module com.example.myapp {
         provides com.example.spi.MyService
             with com.example.impl.MyServiceImpl;
     }
 
-    // Service consumer — declares that this module uses ServiceLoader
-    // to discover implementations of a service interface.
+    // Konsument usług — deklaruje, że ten moduł używa ServiceLoader
+    // do odkrywania implementacji interfejsu usługi.
     module com.example.myapp {
         uses com.example.spi.MyService;
     }
 
-    // Complete real-world example:
+    // Kompletny przykład z praktyki:
     module com.example.myapp {
         requires java.sql;
         requires transitive java.logging;
@@ -160,186 +160,186 @@ Below is a comprehensive syntax reference with examples:
 */
 
 // ============================================================
-// Section 3: Types of Modules
+// Sekcja 3: Typy modułów
 // ============================================================
 
 /*
-## Types of Modules
+## Typy modułów
 
-There are three kinds of modules in JPMS, reflecting different
-migration stages:
+W JPMS istnieją trzy rodzaje modułów, odzwierciedlające różne
+etapy migracji:
 
-1. **Named modules** (explicit modules):
-    - Have a `module-info.java` descriptor.
-    - Placed on the **module path** (`--module-path` / `-p`).
-    - Full strong encapsulation: only `exports`-ed packages are
-      accessible from outside.
-    - Explicit `requires` — missing dependencies fail fast at startup.
+1. **Moduły nazwane** (jawne moduły):
+    - Mają deskryptor `module-info.java`.
+    - Umieszczane na **ścieżce modułów** (`--module-path` / `-p`).
+    - Pełna silna enkapsulacja: tylko pakiety oznaczone jako `exports`
+      są dostępne z zewnątrz.
+    - Jawne `requires` — brakujące zależności powodują szybki błąd przy uruchomieniu.
 
-2. **Automatic modules**:
-    - Regular JARs (without `module-info.java`) placed on the
-      **module path** (not classpath).
-    - The module name is derived from:
-        - `Automatic-Module-Name` manifest attribute (if present), or
-        - the JAR filename (e.g., `guava-31.1.jar` → `guava`).
-    - **Export all packages** — no encapsulation.
-    - **Can read all other modules** (named, automatic, and unnamed).
-    - Serve as a bridge during migration from classpath to modules.
+2. **Moduły automatyczne**:
+    - Zwykłe JARy (bez `module-info.java`) umieszczone na
+      **ścieżce modułów** (nie classpath).
+    - Nazwa modułu jest wyprowadzana z:
+        - Atrybutu manifestu `Automatic-Module-Name` (jeśli obecny), lub
+        - nazwy pliku JAR (np. `guava-31.1.jar` → `guava`).
+    - **Eksportują wszystkie pakiety** — brak enkapsulacji.
+    - **Mogą czytać wszystkie inne moduły** (nazwane, automatyczne i nienazwane).
+    - Służą jako most podczas migracji z classpath do modułów.
 
-3. **Unnamed module**:
-    - Everything on the **classpath** goes into the unnamed module.
-    - There is one unnamed module per class loader.
-    - Can read all named and automatic modules (has full access).
-    - **Named modules CANNOT require the unnamed module** — this is
-      by design, to force proper modularization.
-    - Has no `module-info.java`; exports all its packages (no
-      encapsulation).
+3. **Moduł nienazwany**:
+    - Wszystko na **classpath** trafia do modułu nienazwanego.
+    - Jest jeden moduł nienazwany na class loader.
+    - Może czytać wszystkie moduły nazwane i automatyczne (ma pełny dostęp).
+    - **Moduły nazwane NIE MOGĄ wymagać modułu nienazwanego** — jest to
+      celowe, aby wymusić właściwą modularyzację.
+    - Nie ma `module-info.java`; eksportuje wszystkie swoje pakiety (brak
+      enkapsulacji).
 
-- **Interaction rules**:
-    - Named → Named: OK (via `requires` directives)
-    - Named → Automatic: OK (via `requires`)
-    - Automatic → everything: OK (reads all modules)
-    - Named → Unnamed: **FORBIDDEN** (by design)
-    - Unnamed → Named: OK (can read all named modules)
+- **Zasady interakcji**:
+    - Nazwany → Nazwany: OK (poprzez dyrektywy `requires`)
+    - Nazwany → Automatyczny: OK (poprzez `requires`)
+    - Automatyczny → wszystko: OK (czyta wszystkie moduły)
+    - Nazwany → Nienazwany: **ZABRONIONE** (celowo)
+    - Nienazwany → Nazwany: OK (może czytać wszystkie nazwane moduły)
 
-- **Migration strategies**:
-    - **Bottom-up**: start by modularizing libraries (leaf dependencies)
-      first, working up to the application. Clean but slow.
-    - **Top-down**: modularize the application first, using automatic
-      modules as a bridge for un-modularized libraries. Faster but
-      relies on automatic module behavior.
+- **Strategie migracji**:
+    - **Oddolna**: zacznij od modularyzacji bibliotek (zależności liściowych)
+      najpierw, pracując w górę do aplikacji. Czyste, ale wolne.
+    - **Odgórna**: zmodularyzuj aplikację najpierw, używając modułów
+      automatycznych jako mostu dla niemodularyzowanych bibliotek. Szybsze, ale
+      polega na zachowaniu modułów automatycznych.
 
-- **This project** runs on the classpath (no `module-info.java`),
-  so all our classes live in the **unnamed module**. We can still
-  use the Module API to inspect JDK modules at runtime.
+- **Ten projekt** działa na classpath (bez `module-info.java`),
+  więc wszystkie nasze klasy żyją w **module nienazwanym**. Możemy nadal
+  używać Module API do inspekcji modułów JDK w czasie wykonania.
 */
 
 // ============================================================
-// Section 4: JDK Modules and the Module API
+// Sekcja 4: Moduły JDK i Module API
 // ============================================================
 
 /*
-## JDK Modules and the Module API
+## Moduły JDK i Module API
 
-Java 9+ provides a rich runtime API for inspecting modules:
+Java 9+ dostarcza bogate API runtime do inspekcji modułów:
 
-- **`java.lang.Module`** — represents a runtime module:
-    - `getName()` — module name (null for unnamed module)
-    - `isNamed()` — true for named modules, false for unnamed
-    - `getDescriptor()` — returns `ModuleDescriptor` (null for unnamed)
-    - `isExported(String pkg)` — true if the package is exported
-    - `isOpen(String pkg)` — true if the package is open for reflection
-    - `canRead(Module other)` — true if this module can read other
-    - `getPackages()` — set of all packages in this module
+- **`java.lang.Module`** — reprezentuje moduł w czasie wykonania:
+    - `getName()` — nazwa modułu (null dla modułu nienazwanego)
+    - `isNamed()` — true dla modułów nazwanych, false dla nienazwanych
+    - `getDescriptor()` — zwraca `ModuleDescriptor` (null dla nienazwanego)
+    - `isExported(String pkg)` — true jeśli pakiet jest eksportowany
+    - `isOpen(String pkg)` — true jeśli pakiet jest otwarty dla refleksji
+    - `canRead(Module other)` — true jeśli ten moduł może czytać inny
+    - `getPackages()` — zbiór wszystkich pakietów w tym module
 
-- **`java.lang.module.ModuleDescriptor`** — compile-time module info:
-    - `name()` — module name
-    - `isOpen()` — true if it is an `open module`
-    - `isAutomatic()` — true for automatic modules
-    - `exports()` — set of `Exports` (package name + targets)
-    - `requires()` — set of `Requires` (module name + modifiers)
-    - `opens()` — set of `Opens` (package name + targets)
-    - `provides()` — set of `Provides` (service + implementations)
-    - `uses()` — set of service interfaces this module uses
+- **`java.lang.module.ModuleDescriptor`** — informacje o module z czasu kompilacji:
+    - `name()` — nazwa modułu
+    - `isOpen()` — true jeśli jest to `open module`
+    - `isAutomatic()` — true dla modułów automatycznych
+    - `exports()` — zbiór `Exports` (nazwa pakietu + cele)
+    - `requires()` — zbiór `Requires` (nazwa modułu + modyfikatory)
+    - `opens()` — zbiór `Opens` (nazwa pakietu + cele)
+    - `provides()` — zbiór `Provides` (usługa + implementacje)
+    - `uses()` — zbiór interfejsów usług używanych przez ten moduł
 
-- **`ModuleLayer`** — a layer of modules resolved together:
-    - `ModuleLayer.boot()` — the boot layer (JDK + application modules)
-    - Layers can be stacked for plugin systems (OSGi-like isolation)
-    - `modules()` — all modules in this layer
+- **`ModuleLayer`** — warstwa modułów rozwiązanych razem:
+    - `ModuleLayer.boot()` — warstwa rozruchowa (moduły JDK + aplikacji)
+    - Warstwy mogą być nakładane dla systemów wtyczek (izolacja w stylu OSGi)
+    - `modules()` — wszystkie moduły w tej warstwie
 
-- **Inner descriptor types**:
-    - `ModuleDescriptor.Exports` — `source()` (package), `targets()`,
+- **Wewnętrzne typy deskryptora**:
+    - `ModuleDescriptor.Exports` — `source()` (pakiet), `targets()`,
       `isQualified()`
-    - `ModuleDescriptor.Requires` — `name()` (module), `modifiers()`
+    - `ModuleDescriptor.Requires` — `name()` (moduł), `modifiers()`
       (TRANSITIVE, STATIC, MANDATED, SYNTHETIC)
     - `ModuleDescriptor.Provides` — `service()`, `providers()`
     - `ModuleDescriptor.Opens` — `source()`, `targets()`, `isQualified()`
 */
 
 // ============================================================
-// Section 5: ServiceLoader with JPMS
+// Sekcja 5: ServiceLoader z JPMS
 // ============================================================
 
 /*
-## ServiceLoader with JPMS
+## ServiceLoader z JPMS
 
-- `ServiceLoader` (introduced in Java 6) discovers and loads service
-  implementations at runtime. JPMS integrates deeply with it.
-- **Classpath mode** (pre-modules):
-    - Implementations are registered via files in
-      `META-INF/services/<fully-qualified-interface-name>`.
-    - Each file lists the fully-qualified class names of implementations.
-- **Module mode** (JPMS):
+- `ServiceLoader` (wprowadzony w Java 6) odkrywa i ładuje implementacje
+  usług w czasie wykonania. JPMS jest z nim głęboko zintegrowany.
+- **Tryb classpath** (przed modułami):
+    - Implementacje są rejestrowane poprzez pliki w
+      `META-INF/services/<pełna-kwalifikowana-nazwa-interfejsu>`.
+    - Każdy plik wymienia pełne kwalifikowane nazwy klas implementacji.
+- **Tryb modułowy** (JPMS):
     - `provides com.example.spi.MyService with com.example.impl.MyImpl;`
-      in module-info.java replaces the META-INF/services file.
-    - `uses com.example.spi.MyService;` is required in the consuming
-      module's descriptor — without it, `ServiceLoader.load()` in a
-      named module returns no results.
-    - JPMS providers are discovered from the module graph, not by
-      scanning the classpath.
-- **Unnamed module** (classpath): `ServiceLoader` still works and
-  discovers both META-INF/services and module-based providers. No
-  `uses` directive is needed (unnamed module has no descriptor).
-- **JDK uses ServiceLoader extensively**:
-    - `java.util.spi.ToolProvider` — javac, jar, jlink as services
-    - `java.nio.charset.spi.CharsetProvider` — additional charsets
-    - `java.security.Provider` — security/crypto implementations
-    - `java.sql.Driver` — JDBC drivers (automatic discovery)
-    - `javax.tools.JavaCompiler` — compiler API
+      w module-info.java zastępuje plik META-INF/services.
+    - `uses com.example.spi.MyService;` jest wymagane w deskryptorze
+      modułu konsumenta — bez tego `ServiceLoader.load()` w nazwanym
+      module nie zwraca wyników.
+    - Dostawcy JPMS są odkrywani z grafu modułów, a nie przez
+      skanowanie classpath.
+- **Moduł nienazwany** (classpath): `ServiceLoader` nadal działa i
+  odkrywa zarówno dostawców META-INF/services, jak i opartych na modułach. Dyrektywa
+  `uses` nie jest potrzebna (moduł nienazwany nie ma deskryptora).
+- **JDK intensywnie używa ServiceLoader**:
+    - `java.util.spi.ToolProvider` — javac, jar, jlink jako usługi
+    - `java.nio.charset.spi.CharsetProvider` — dodatkowe zestawy znaków
+    - `java.security.Provider` — implementacje bezpieczeństwa/kryptografii
+    - `java.sql.Driver` — sterowniki JDBC (automatyczne odkrywanie)
+    - `javax.tools.JavaCompiler` — API kompilatora
 */
 
 // ============================================================
-// Section 6: Practical Aspects — Tools, Migration, and Flags
+// Sekcja 6: Aspekty praktyczne — Narzędzia, migracja i flagi
 // ============================================================
 
 /*
-## Practical Aspects — Tools, Migration, and Flags
+## Aspekty praktyczne — Narzędzia, migracja i flagi
 
-- **`jlink`** — creates custom runtime images containing only the
-  modules your application needs:
-    - Full JDK: ~300 MB. Custom image for a simple app: ~30-40 MB.
-    - Command: `jlink --module-path $JAVA_HOME/jmods:mods
+- **`jlink`** — tworzy niestandardowe obrazy runtime zawierające tylko
+  moduły potrzebne Twojej aplikacji:
+    - Pełne JDK: ~300 MB. Niestandardowy obraz dla prostej aplikacji: ~30-40 MB.
+    - Polecenie: `jlink --module-path $JAVA_HOME/jmods:mods
       --add-modules com.example.app --output custom-jre`
-    - The output is a self-contained directory with `bin/java`.
-    - Enables "ship the JRE with the app" (no JRE installation needed).
+    - Wynik to samowystarczalny katalog z `bin/java`.
+    - Umożliwia „dostarczenie JRE z aplikacją" (brak potrzeby instalacji JRE).
 
-- **`jdeps`** — static dependency analyzer:
-    - `jdeps --print-module-deps myapp.jar` — lists required modules
-      (input for jlink).
-    - `jdeps --jdk-internals myapp.jar` — finds usage of internal
-      JDK APIs (e.g., `sun.misc.Unsafe`).
-    - `jdeps -summary myapp.jar` — quick summary of module dependencies.
+- **`jdeps`** — statyczny analizator zależności:
+    - `jdeps --print-module-deps myapp.jar` — wypisuje wymagane moduły
+      (dane wejściowe dla jlink).
+    - `jdeps --jdk-internals myapp.jar` — znajduje użycie wewnętrznych
+      API JDK (np. `sun.misc.Unsafe`).
+    - `jdeps -summary myapp.jar` — szybkie podsumowanie zależności modułów.
 
-- **Command-line flags for module access**:
-    - `--module-path` (`-p`): specifies the module path (like
-      classpath but for modules).
-    - `--add-modules <module>`: adds a module to the module graph.
-      Needed for modules not required transitively.
-    - `--add-exports <module>/<package>=<target>`: exports a package
-      at runtime (bypasses encapsulation). Use `ALL-UNNAMED` as target
-      for classpath code.
-    - `--add-opens <module>/<package>=<target>`: opens a package for
-      deep reflection at runtime. Common fix for frameworks that
-      reflect on JDK internals.
-    - `--add-reads <module>=<target>`: adds a read edge at runtime.
+- **Flagi wiersza poleceń do dostępu do modułów**:
+    - `--module-path` (`-p`): określa ścieżkę modułów (jak
+      classpath, ale dla modułów).
+    - `--add-modules <moduł>`: dodaje moduł do grafu modułów.
+      Potrzebne dla modułów niewymaganych przechodnio.
+    - `--add-exports <moduł>/<pakiet>=<cel>`: eksportuje pakiet
+      w czasie wykonania (omija enkapsulację). Użyj `ALL-UNNAMED` jako celu
+      dla kodu na classpath.
+    - `--add-opens <moduł>/<pakiet>=<cel>`: otwiera pakiet dla
+      głębokiej refleksji w czasie wykonania. Typowa poprawka dla frameworków
+      reflektujących na wewnętrznych elementach JDK.
+    - `--add-reads <moduł>=<cel>`: dodaje krawędź czytania w czasie wykonania.
 
-- **Common migration issues**:
-    - **Split packages**: two modules/JARs containing the same package.
-      The module system forbids this. Fix: merge JARs or rename packages.
-    - **Internal JDK API usage**: `sun.misc.Unsafe`, `com.sun.xml.*`,
-      etc. These are encapsulated in Java 9+. Fix: use official
-      alternatives (e.g., `VarHandle` instead of `Unsafe`).
-    - **Reflection on non-open packages**: frameworks like Hibernate,
-      Jackson, Spring rely on `setAccessible(true)`. Fix: add `opens`
-      directives or use `--add-opens` flags.
-    - **Automatic module name instability**: if a library JAR has no
-      `Automatic-Module-Name` manifest entry, the derived name depends
-      on the filename and may change between versions.
+- **Typowe problemy migracji**:
+    - **Podzielone pakiety**: dwa moduły/JARy zawierające ten sam pakiet.
+      System modułów zabrania tego. Poprawka: scal JARy lub zmień nazwy pakietów.
+    - **Użycie wewnętrznych API JDK**: `sun.misc.Unsafe`, `com.sun.xml.*`
+      itp. Są one enkapsulowane w Java 9+. Poprawka: użyj oficjalnych
+      alternatyw (np. `VarHandle` zamiast `Unsafe`).
+    - **Refleksja na nieotwartych pakietach**: frameworki takie jak Hibernate,
+      Jackson, Spring polegają na `setAccessible(true)`. Poprawka: dodaj dyrektywy `opens`
+      lub użyj flag `--add-opens`.
+    - **Niestabilność nazw modułów automatycznych**: jeśli JAR biblioteki nie ma
+      wpisu manifestu `Automatic-Module-Name`, wyprowadzona nazwa zależy
+      od nazwy pliku i może się zmieniać między wersjami.
 */
 
 public class Jpms {
 
-    // ---- Helper types for Section 5 (ServiceLoader concept demo) ----
+    // ---- Typy pomocnicze dla Sekcji 5 (demonstracja koncepcji ServiceLoader) ----
 
     interface Greeting {
         String greet(String name);
@@ -361,20 +361,20 @@ public class Jpms {
     }
 
     // ============================================================
-    // Section 1: Introduction to JPMS — Why Modules?
+    // Sekcja 1: Wprowadzenie do JPMS — Dlaczego moduły?
     // ============================================================
 
     static void introductionToJpms() {
         System.out.println("=== Introduction to JPMS — Why Modules? ===");
 
-        // Current class is in the unnamed module (we're on the classpath)
+        // Bieżąca klasa jest w module nienazwanym (jesteśmy na classpath)
         Module currentModule = Jpms.class.getModule();
         System.out.println("Current class module:");
         System.out.println("  getModule():  " + currentModule);
         System.out.println("  isNamed():    " + currentModule.isNamed());
         System.out.println("  getName():    " + currentModule.getName());
 
-        // JDK classes live in named modules
+        // Klasy JDK żyją w nazwanych modułach
         Module stringModule = String.class.getModule();
         System.out.println("\njava.lang.String module:");
         System.out.println("  isNamed(): " + stringModule.isNamed());
@@ -390,12 +390,12 @@ public class Jpms {
         System.out.println("  isNamed(): " + sqlModule.isNamed());
         System.out.println("  getName(): " + sqlModule.getName());
 
-        // Count total modules in the boot layer
+        // Zliczanie wszystkich modułów w warstwie rozruchowej
         ModuleLayer bootLayer = ModuleLayer.boot();
         long totalModules = bootLayer.modules().size();
         System.out.println("\nBoot layer total modules: " + totalModules);
 
-        // List all java.* module names (the public API modules)
+        // Wypisanie wszystkich nazw modułów java.* (publiczne moduły API)
         var javaModules = bootLayer.modules().stream()
                 .map(Module::getName)
                 .filter(name -> name.startsWith("java."))
@@ -406,13 +406,13 @@ public class Jpms {
     }
 
     // ============================================================
-    // Section 2: Module Descriptor (module-info.java) Syntax
+    // Sekcja 2: Deskryptor modułu (module-info.java) — składnia
     // ============================================================
 
     static void moduleDescriptorSyntax() {
         System.out.println("\n=== Module Descriptor (module-info.java) Syntax ===");
 
-        // Inspect java.base — the foundational module
+        // Inspekcja java.base — moduł fundamentalny
         Module javaBase = String.class.getModule();
         ModuleDescriptor baseDescriptor = javaBase.getDescriptor();
 
@@ -421,9 +421,9 @@ public class Jpms {
         System.out.println("  isOpen: " + baseDescriptor.isOpen());
         System.out.println("  isAutomatic: " + baseDescriptor.isAutomatic());
 
-        // First 15 exports from java.base
+        // Pierwsze 15 eksportów z java.base
         var baseExports = baseDescriptor.exports().stream()
-                .filter(e -> !e.isQualified())  // only unqualified (public) exports
+                .filter(e -> !e.isQualified())  // tylko niekwalifikowane (publiczne) eksporty
                 .map(ModuleDescriptor.Exports::source)
                 .sorted()
                 .limit(15)
@@ -431,7 +431,7 @@ public class Jpms {
         System.out.println("\n  first 15 (unqualified) exports:");
         baseExports.forEach(pkg -> System.out.println("    exports " + pkg));
 
-        // Inspect java.sql — shows transitive requires
+        // Inspekcja java.sql — pokazuje przechodnie requires
         Module javaSql = java.sql.Connection.class.getModule();
         ModuleDescriptor sqlDescriptor = javaSql.getDescriptor();
 
@@ -443,7 +443,7 @@ public class Jpms {
                     System.out.println("  requires " + req.name() + mods);
                 });
 
-        // Qualified exports from java.base (exports ... to ...)
+        // Kwalifikowane eksporty z java.base (exports ... to ...)
         var qualifiedExports = baseDescriptor.exports().stream()
                 .filter(ModuleDescriptor.Exports::isQualified)
                 .sorted(Comparator.comparing(ModuleDescriptor.Exports::source))
@@ -453,7 +453,7 @@ public class Jpms {
         qualifiedExports.forEach(exp ->
                 System.out.println("  exports " + exp.source() + " to " + exp.targets()));
 
-        // Service providers declared by java.base
+        // Dostawcy usług zadeklarowani przez java.base
         var baseProvides = baseDescriptor.provides();
         System.out.println("\njava.base provides (" + baseProvides.size() + " services):");
         baseProvides.stream()
@@ -464,30 +464,30 @@ public class Jpms {
     }
 
     // ============================================================
-    // Section 3: Types of Modules
+    // Sekcja 3: Typy modułów
     // ============================================================
 
     static void typesOfModules() {
         System.out.println("\n=== Types of Modules ===");
 
-        // Confirm current class is in the unnamed module
+        // Potwierdzenie, że bieżąca klasa jest w module nienazwanym
         Module currentModule = Jpms.class.getModule();
         System.out.println("Current class module: " + currentModule);
         System.out.println("  isNamed(): " + currentModule.isNamed());
         System.out.println("  This is the UNNAMED module (classpath)");
 
-        // Unnamed module can access named module classes
+        // Moduł nienazwany ma dostęp do klas modułów nazwanych
         Module javaBase = String.class.getModule();
         System.out.println("\nUnnamed module can access java.base classes:");
         System.out.println("  String.class loaded OK: " + (String.class != null));
         System.out.println("  currentModule.canRead(java.base): " + currentModule.canRead(javaBase));
 
-        // Get the class loader's unnamed module
+        // Pobranie modułu nienazwanego class loadera
         Module classLoaderUnnamed = Jpms.class.getClassLoader().getUnnamedModule();
         System.out.println("\nClassLoader's unnamed module: " + classLoaderUnnamed);
         System.out.println("  same as our module: " + (currentModule == classLoaderUnnamed));
 
-        // Partition boot layer modules into java.* vs jdk.* groups
+        // Podział modułów warstwy rozruchowej na grupy java.* vs jdk.*
         ModuleLayer bootLayer = ModuleLayer.boot();
         var modulesByPrefix = bootLayer.modules().stream()
                 .collect(Collectors.groupingBy(m -> {
@@ -501,7 +501,7 @@ public class Jpms {
                 .sorted(Map.Entry.comparingByKey())
                 .forEach(e -> System.out.println("  " + e.getKey() + ": " + e.getValue() + " modules"));
 
-        // Test canRead() relationships
+        // Test relacji canRead()
         Module javaSql = java.sql.Connection.class.getModule();
         Module javaNetHttp = java.net.http.HttpClient.class.getModule();
         System.out.println("\ncanRead() relationships:");
@@ -510,7 +510,7 @@ public class Jpms {
         System.out.println("  java.sql → java.base:    " + javaSql.canRead(javaBase));
         System.out.println("  java.sql → java.net.http:" + javaSql.canRead(javaNetHttp));
 
-        // Show packages in our unnamed module
+        // Wyświetlanie pakietów w naszym module nienazwanym
         var ourPackages = currentModule.getPackages();
         System.out.println("\nPackages in unnamed module (" + ourPackages.size() + "):");
         ourPackages.stream().sorted().limit(10)
@@ -521,13 +521,13 @@ public class Jpms {
     }
 
     // ============================================================
-    // Section 4: JDK Modules and the Module API
+    // Sekcja 4: Moduły JDK i Module API
     // ============================================================
 
     static void jdkModulesAndApi() {
         System.out.println("\n=== JDK Modules and the Module API ===");
 
-        // Deep-dive: java.base
+        // Dogłębna analiza: java.base
         Module javaBase = String.class.getModule();
         ModuleDescriptor baseDesc = javaBase.getDescriptor();
 
@@ -542,12 +542,12 @@ public class Jpms {
         System.out.println("  total packages:      " + packageCount);
         System.out.println("  services it uses:    " + usesCount);
 
-        // Some services java.base uses
+        // Niektóre usługi, których java.base używa
         System.out.println("  uses (first 10):");
         baseDesc.uses().stream().sorted().limit(10)
                 .forEach(svc -> System.out.println("    uses " + svc));
 
-        // Deep-dive: java.sql
+        // Dogłębna analiza: java.sql
         Module javaSql = java.sql.Connection.class.getModule();
         ModuleDescriptor sqlDesc = javaSql.getDescriptor();
 
@@ -563,14 +563,14 @@ public class Jpms {
                 .forEach(exp -> System.out.println("    exports " + exp.source()
                         + (exp.isQualified() ? " to " + exp.targets() : "")));
 
-        // Check export visibility on java.base
+        // Sprawdzanie widoczności eksportów w java.base
         System.out.println("\nExport visibility checks on java.base:");
         System.out.println("  isExported(\"java.lang\"):          " + javaBase.isExported("java.lang"));
         System.out.println("  isExported(\"java.util\"):           " + javaBase.isExported("java.util"));
         System.out.println("  isExported(\"sun.security.ssl\"):    " + javaBase.isExported("sun.security.ssl"));
         System.out.println("  isExported(\"jdk.internal.misc\"):   " + javaBase.isExported("jdk.internal.misc"));
 
-        // Find top 5 largest JDK modules by (unqualified) export count
+        // Znalezienie 5 największych modułów JDK według liczby niekwalifikowanych eksportów
         ModuleLayer bootLayer = ModuleLayer.boot();
         System.out.println("\nTop 5 JDK modules by unqualified export count:");
         bootLayer.modules().stream()
@@ -586,7 +586,7 @@ public class Jpms {
                     System.out.println("  " + m.getName() + ": " + count + " exports");
                 });
 
-        // Check isOpen on java.base
+        // Sprawdzanie isOpen w java.base
         System.out.println("\nReflection openness checks on java.base:");
         System.out.println("  isOpen(\"java.lang\"): " + javaBase.isOpen("java.lang"));
         System.out.println("  isOpen(\"java.util\"): " + javaBase.isOpen("java.util"));
@@ -594,20 +594,20 @@ public class Jpms {
     }
 
     // ============================================================
-    // Section 5: ServiceLoader with JPMS
+    // Sekcja 5: ServiceLoader z JPMS
     // ============================================================
 
     static void serviceLoaderWithJpms() {
         System.out.println("\n=== ServiceLoader with JPMS ===");
 
-        // Discover JDK tool providers via ServiceLoader
+        // Odkrywanie dostawców narzędzi JDK poprzez ServiceLoader
         System.out.println("--- JDK ToolProvider services ---");
         ServiceLoader<ToolProvider> toolProviders = ServiceLoader.load(ToolProvider.class);
         System.out.println("Discovered tool providers:");
         toolProviders.forEach(tp ->
                 System.out.println("  " + tp.name() + " (" + tp.getClass().getModule().getName() + ")"));
 
-        // Find specific tool — javac
+        // Znalezienie konkretnego narzędzia — javac
         var javacTool = ToolProvider.findFirst("javac");
         System.out.println("\nToolProvider.findFirst(\"javac\"): " + javacTool.map(ToolProvider::name).orElse("not found"));
 
@@ -617,7 +617,7 @@ public class Jpms {
         var jlinkTool = ToolProvider.findFirst("jlink");
         System.out.println("ToolProvider.findFirst(\"jlink\"): " + jlinkTool.map(ToolProvider::name).orElse("not found"));
 
-        // Discover charset providers
+        // Odkrywanie dostawców zestawów znaków
         System.out.println("\n--- CharsetProvider services ---");
         ServiceLoader<CharsetProvider> charsetProviders = ServiceLoader.load(CharsetProvider.class);
         var charsetProviderList = charsetProviders.stream()
@@ -628,7 +628,7 @@ public class Jpms {
                 System.out.println("  " + cp.getClass().getName()
                         + " (module: " + cp.getClass().getModule().getName() + ")"));
 
-        // Security providers (these are loaded differently but illustrate the concept)
+        // Dostawcy bezpieczeństwa (ładowani inaczej, ale ilustrują koncepcję)
         System.out.println("\n--- Security Providers ---");
         var securityProviders = Security.getProviders();
         System.out.println("Security provider count: " + securityProviders.length);
@@ -639,10 +639,10 @@ public class Jpms {
             System.out.println("  ... and " + (securityProviders.length - 5) + " more");
         }
 
-        // Demonstrate the ServiceLoader concept with inner classes
+        // Demonstracja koncepcji ServiceLoader z klasami wewnętrznymi
         System.out.println("\n--- ServiceLoader concept (inner class demo) ---");
-        // In a real module, you'd use: provides Greeting with EnglishGreeting, PolishGreeting;
-        // Since we're on the classpath, we simulate the concept:
+        // W rzeczywistym module użyłbyś: provides Greeting with EnglishGreeting, PolishGreeting;
+        // Ponieważ jesteśmy na classpath, symulujemy koncepcję:
         List<Greeting> greetings = List.of(new EnglishGreeting(), new PolishGreeting());
         System.out.println("Simulated service implementations:");
         for (var greeting : greetings) {
@@ -650,7 +650,7 @@ public class Jpms {
         }
         System.out.println("  (in a modular app, ServiceLoader.load(Greeting.class) would discover these)");
 
-        // Print provides declarations from java.base
+        // Wypisanie deklaracji provides z java.base
         System.out.println("\n--- java.base provides declarations ---");
         ModuleDescriptor baseDesc = String.class.getModule().getDescriptor();
         baseDesc.provides().stream()
@@ -660,20 +660,20 @@ public class Jpms {
     }
 
     // ============================================================
-    // Section 6: Practical Aspects — Tools, Migration, and Flags
+    // Sekcja 6: Aspekty praktyczne — Narzędzia, migracja i flagi
     // ============================================================
 
     static void practicalAspects() {
         System.out.println("\n=== Practical Aspects — Tools, Migration, and Flags ===");
 
-        // Runtime version
+        // Wersja runtime
         Runtime.Version version = Runtime.version();
         System.out.println("Runtime.version(): " + version);
         System.out.println("  feature: " + version.feature());
         System.out.println("  interim: " + version.interim());
         System.out.println("  update:  " + version.update());
 
-        // Build class-to-module mapping for common JDK classes
+        // Budowanie mapowania klasa-moduł dla typowych klas JDK
         System.out.println("\n--- Class-to-module mapping ---");
         var classModuleMap = new LinkedHashMap<String, String>();
         classModuleMap.put("java.lang.String", String.class.getModule().getName());
@@ -688,7 +688,7 @@ public class Jpms {
         classModuleMap.forEach((cls, mod) ->
                 System.out.printf("  %-45s → %s%n", cls, mod));
 
-        // Compute minimal module set (simulating jdeps output)
+        // Obliczanie minimalnego zestawu modułów (symulacja wyniku jdeps)
         System.out.println("\n--- Minimal module set (simulating jdeps) ---");
         var usedModules = new TreeSet<String>();
         usedModules.add(String.class.getModule().getName());                   // java.base
@@ -698,13 +698,13 @@ public class Jpms {
         usedModules.forEach(m -> System.out.println("  " + m));
         System.out.println("jdeps equivalent: --add-modules " + String.join(",", usedModules));
 
-        // Try reflective access to internal JDK class → catch encapsulation error
+        // Próba refleksyjnego dostępu do wewnętrznej klasy JDK → przechwycenie błędu enkapsulacji
         System.out.println("\n--- Encapsulation in action ---");
         try {
-            // sun.security.ssl.SSLContextImpl is an internal class
+            // sun.security.ssl.SSLContextImpl jest klasą wewnętrzną
             Class<?> internalClass = Class.forName("sun.security.ssl.SSLContextImpl");
             var constructor = internalClass.getDeclaredConstructor();
-            constructor.setAccessible(true);  // This should fail with InaccessibleObjectException
+            constructor.setAccessible(true);  // To powinno się nie powieść z InaccessibleObjectException
             System.out.println("  (unexpected) created internal class instance");
         } catch (Exception e) {
             System.out.println("  Attempted: reflective access to sun.security.ssl.SSLContextImpl");
@@ -712,7 +712,7 @@ public class Jpms {
             System.out.println("  Fix:       --add-opens java.base/sun.security.ssl=ALL-UNNAMED");
         }
 
-        // Summary of command-line flags
+        // Podsumowanie flag wiersza poleceń
         System.out.println("\n--- JPMS command-line flags summary ---");
         System.out.println("  --module-path (-p) <path>          Set the module path");
         System.out.println("  --add-modules <module>(,<module>)* Add root modules");
@@ -727,7 +727,7 @@ public class Jpms {
         System.out.println("  ALL-UNNAMED  — all code on the classpath");
         System.out.println("  ALL-MODULE-PATH — all modules on the module path");
 
-        // jlink summary
+        // Podsumowanie jlink
         System.out.println("\n--- jlink: custom runtime images ---");
         ModuleLayer bootLayer = ModuleLayer.boot();
         long totalJdkModules = bootLayer.modules().size();
@@ -740,37 +740,37 @@ public class Jpms {
     }
 
     // ============================================================
-    // Section 7: Practical Module Creation — Compile, Package, Load
+    // Sekcja 7: Praktyczne tworzenie modułów — kompilacja, pakowanie, ładowanie
     // ============================================================
 
     /*
-    ## Practical Module Creation — Compile, Package, Load
+    ## Praktyczne tworzenie modułów — kompilacja, pakowanie, ładowanie
 
-    All previous sections inspected JDK modules from the classpath.
-    This section goes further: it **programmatically creates, compiles,
-    packages, and loads** three Java modules entirely at runtime.
+    Wszystkie poprzednie sekcje inspekowały moduły JDK z classpath.
+    Ta sekcja idzie dalej: **programistycznie tworzy, kompiluje,
+    pakuje i ładuje** trzy moduły Java w całości w czasie wykonania.
 
-    **Three-module example**:
-        com.training.api       — exports a `MessageService` interface
-        com.training.provider  — requires api, provides MessageService
-                                 with EnglishMessageService + PolishMessageService
-        com.training.app       — requires api, uses MessageService via ServiceLoader
+    **Przykład trzech modułów**:
+        com.training.api       — eksportuje interfejs `MessageService`
+        com.training.provider  — wymaga api, dostarcza MessageService
+                                 z EnglishMessageService + PolishMessageService
+        com.training.app       — wymaga api, używa MessageService przez ServiceLoader
 
-    **Key JPMS directives demonstrated**:
+    **Kluczowe dyrektywy JPMS zademonstrowane**:
         exports, requires, provides...with, uses
 
-    **Steps performed programmatically**:
-    1. Create a temp directory with `src/`, `out/`, `mods/` subdirectories
-    2. Write source files (module-info.java + Java classes) using text blocks
-    3. Compile all modules with `ToolProvider("javac")` and `--module-source-path`
-    4. Package each module into a modular JAR with `ToolProvider("jar")`
-    5. Load modules at runtime via `ModuleFinder` + `Configuration` + `ModuleLayer`
-    6. Inspect the resulting module descriptors (exports, requires, provides, uses)
-    7. Invoke `Main.run()` reflectively — it discovers service implementations
-       via `ServiceLoader`, proving that `provides...with` + `uses` work end-to-end
-    8. Clean up temp files
+    **Kroki wykonywane programistycznie**:
+    1. Tworzenie katalogu tymczasowego z podkatalogami `src/`, `out/`, `mods/`
+    2. Zapis plików źródłowych (module-info.java + klasy Java) przy użyciu bloków tekstowych
+    3. Kompilacja wszystkich modułów za pomocą `ToolProvider("javac")` i `--module-source-path`
+    4. Pakowanie każdego modułu do modularnego JARa za pomocą `ToolProvider("jar")`
+    5. Ładowanie modułów w czasie wykonania przez `ModuleFinder` + `Configuration` + `ModuleLayer`
+    6. Inspekcja wynikowych deskryptorów modułów (exports, requires, provides, uses)
+    7. Refleksyjne wywołanie `Main.run()` — odkrywa implementacje usług
+       przez `ServiceLoader`, udowadniając, że `provides...with` + `uses` działają od początku do końca
+    8. Czyszczenie plików tymczasowych
 
-    This is the **full Jigsaw lifecycle** without leaving the JVM.
+    To jest **pełny cykl życia Jigsaw** bez opuszczania JVM.
     */
 
     private static void writeSource(Path srcRoot, String moduleName, String packagePath,
@@ -788,14 +788,14 @@ public class Jpms {
 
         Path tempDir = null;
         try {
-            // Step 1: Create temp directory structure
+            // Krok 1: Tworzenie struktury katalogu tymczasowego
             tempDir = Files.createTempDirectory("jpms-demo-");
             Path srcDir = Files.createDirectory(tempDir.resolve("src"));
             Path outDir = Files.createDirectory(tempDir.resolve("out"));
             Path modsDir = Files.createDirectory(tempDir.resolve("mods"));
             System.out.println("Temp directory: " + tempDir);
 
-            // Step 2: Write source files for three modules
+            // Krok 2: Zapis plików źródłowych dla trzech modułów
 
             // --- com.training.api ---
             writeSource(srcDir, "com.training.api", "",
@@ -855,9 +855,9 @@ public class Jpms {
                     """);
 
             // --- com.training.app ---
-            // We export com.training.app so we can invoke Main.run() reflectively from this demo.
-            // In a real application, the app module would be the entry point (--module com.training.app/...)
-            // and would NOT need to export its package.
+            // Eksportujemy com.training.app, abyśmy mogli refleksyjnie wywołać Main.run() z tej demonstracji.
+            // W rzeczywistej aplikacji moduł app byłby punktem wejścia (--module com.training.app/...)
+            // i NIE musiałby eksportować swojego pakietu.
             writeSource(srcDir, "com.training.app", "",
                     "module-info.java", """
                     module com.training.app {
@@ -878,7 +878,7 @@ public class Jpms {
                     public class Main {
                         public static String run(ModuleLayer layer) {
                             StringBuilder sb = new StringBuilder();
-                            // Use ServiceLoader.load(layer, service) to discover providers in our custom layer
+                            // Użycie ServiceLoader.load(layer, service) do odkrycia dostawców w naszej niestandardowej warstwie
                             ServiceLoader<MessageService> loader = ServiceLoader.load(layer, MessageService.class);
                             loader.forEach(svc ->
                                 sb.append("  [").append(svc.language()).append("] ").append(svc.getMessage()).append("\\n")
@@ -893,7 +893,7 @@ public class Jpms {
 
             System.out.println("Source files written (3 modules, 7 files)");
 
-            // Step 3: Compile all modules with javac --module-source-path
+            // Krok 3: Kompilacja wszystkich modułów za pomocą javac --module-source-path
             var javac = ToolProvider.findFirst("javac")
                     .orElseThrow(() -> new RuntimeException("javac ToolProvider not found"));
 
@@ -908,7 +908,7 @@ public class Jpms {
             }
             System.out.println("Compilation successful (all 3 modules compiled)");
 
-            // Step 4: Package each module into a modular JAR
+            // Krok 4: Pakowanie każdego modułu do modularnego JARa
             var jar = ToolProvider.findFirst("jar")
                     .orElseThrow(() -> new RuntimeException("jar ToolProvider not found"));
 
@@ -927,31 +927,31 @@ public class Jpms {
             }
             System.out.println("JAR packaging successful (3 modular JARs created)");
 
-            // Step 5: Load modules at runtime via ModuleFinder + Configuration + ModuleLayer
+            // Krok 5: Ładowanie modułów w czasie wykonania przez ModuleFinder + Configuration + ModuleLayer
             ModuleFinder finder = ModuleFinder.of(modsDir);
 
-            // Show what the finder discovered
+            // Pokazanie co finder odkrył
             System.out.println("\nModuleFinder discovered:");
             finder.findAll().stream()
                     .sorted(Comparator.comparing(ref -> ref.descriptor().name()))
                     .forEach(ref -> System.out.println("  " + ref.descriptor().name()
                             + " (" + ref.location().map(Object::toString).orElse("?") + ")"));
 
-            // Resolve the module graph
+            // Rozwiązywanie grafu modułów
             ModuleLayer parentLayer = ModuleLayer.boot();
             Configuration parentConfig = parentLayer.configuration();
             Configuration config = parentConfig.resolve(
                     finder,
-                    ModuleFinder.of(),  // empty after-finder
+                    ModuleFinder.of(),  // pusty after-finder
                     Set.of("com.training.app", "com.training.provider", "com.training.api"));
 
-            // Create a new ModuleLayer with its own class loader
+            // Tworzenie nowej ModuleLayer z własnym class loaderem
             ModuleLayer layer = parentLayer.defineModulesWithOneLoader(
                     config, ClassLoader.getSystemClassLoader());
 
             System.out.println("\nCustom ModuleLayer created with " + layer.modules().size() + " modules");
 
-            // Step 6: Inspect module descriptors
+            // Krok 6: Inspekcja deskryptorów modułów
             System.out.println("\n--- Module descriptors ---");
             layer.modules().stream()
                     .sorted(Comparator.comparing(Module::getName))
@@ -972,7 +972,7 @@ public class Jpms {
                         System.out.println("  }");
                     });
 
-            // Step 7: Invoke Main.run(layer) reflectively to demonstrate ServiceLoader
+            // Krok 7: Refleksyjne wywołanie Main.run(layer) w celu demonstracji ServiceLoader
             System.out.println("\n--- Invoking com.training.app.Main.run(layer) ---");
             Class<?> mainClass = layer.findLoader("com.training.app")
                     .loadClass("com.training.app.Main");
@@ -987,7 +987,7 @@ public class Jpms {
             System.out.println("Error: " + e);
             e.printStackTrace();
         } finally {
-            // Step 8: Clean up temp files
+            // Krok 8: Czyszczenie plików tymczasowych
             if (tempDir != null) {
                 try {
                     Path dir = tempDir;
@@ -1012,7 +1012,7 @@ public class Jpms {
     }
 
     // ============================================================
-    // Main — run all sections
+    // Main — uruchomienie wszystkich sekcji
     // ============================================================
 
     public static void main(String[] args) {

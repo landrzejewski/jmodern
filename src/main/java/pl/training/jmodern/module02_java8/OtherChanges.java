@@ -11,213 +11,213 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 // ============================================================
-// Section 1: Default Methods in Interfaces
+// Sekcja 1: Metody domyślne w interfejsach
 // ============================================================
 
 /*
-## Default Methods in Interfaces
+## Metody domyślne w interfejsach
 
-- Before Java 8, adding a new method to an interface **broke all
-  existing implementations**. There was no way to evolve interfaces
-  without forcing every implementor to update.
-- **Default methods** solve this by allowing interfaces to provide
-  a method body using the `default` keyword. Implementing classes
-  inherit the default behavior but may **override** it.
-- This enabled backward-compatible evolution of core APIs — for
-  example, `Collection.forEach()`, `List.sort()`, `Map.getOrDefault()`
-  were all added as default methods without breaking existing code.
-- **Static methods** in interfaces are also allowed since Java 8.
-  They provide utility methods directly on the interface type
-  (e.g., `Comparator.comparing()`, `Predicate.not()`).
-- **Diamond problem**: if a class implements two interfaces that
-  both provide a default method with the same signature, the
-  compiler forces the class to **explicitly override** the method
-  and resolve the ambiguity. Resolution rules:
-    1. **Class wins**: a method defined in a class (or superclass)
-       takes priority over any default method.
-    2. **Most specific interface wins**: if one interface extends
-       another, the sub-interface's default wins.
-    3. **Explicit resolution required**: if neither rule applies,
-       the class must override and choose via
+- Przed Java 8 dodanie nowej metody do interfejsu **łamało wszystkie
+  istniejące implementacje**. Nie było sposobu na ewolucję interfejsów
+  bez zmuszania każdego implementora do aktualizacji.
+- **Metody domyślne** rozwiązują to, pozwalając interfejsom dostarczać
+  ciało metody za pomocą słowa kluczowego `default`. Klasy implementujące
+  dziedziczą domyślne zachowanie, ale mogą je **nadpisać**.
+- Umożliwiło to kompatybilną wstecznie ewolucję podstawowych API — na
+  przykład `Collection.forEach()`, `List.sort()`, `Map.getOrDefault()`
+  zostały dodane jako metody domyślne bez łamania istniejącego kodu.
+- **Metody statyczne** w interfejsach są również dozwolone od Java 8.
+  Dostarczają metody narzędziowe bezpośrednio na typie interfejsu
+  (np. `Comparator.comparing()`, `Predicate.not()`).
+- **Problem diamentu**: jeśli klasa implementuje dwa interfejsy, które
+  oba dostarczają metodę domyślną o tej samej sygnaturze,
+  kompilator zmusza klasę do **jawnego nadpisania** metody
+  i rozwiązania niejednoznaczności. Reguły rozwiązywania:
+    1. **Klasa wygrywa**: metoda zdefiniowana w klasie (lub nadklasie)
+       ma priorytet nad każdą metodą domyślną.
+    2. **Najbardziej specyficzny interfejs wygrywa**: jeśli jeden interfejs
+       rozszerza inny, wygrywa metoda domyślna podinterfejsu.
+    3. **Wymagane jawne rozwiązanie**: jeśli żadna reguła nie ma zastosowania,
+       klasa musi nadpisać i wybrać za pomocą
        `InterfaceName.super.method()`.
-- **Interface vs abstract class after Java 8**:
-    - Interfaces still cannot have instance fields (state).
-    - Interfaces support multiple inheritance of behavior.
-    - Abstract classes can have constructors, fields, and non-public methods.
-    - Use interfaces for defining types/contracts; abstract classes
-      for sharing state and partial implementation among related classes.
+- **Interfejs vs klasa abstrakcyjna po Java 8**:
+    - Interfejsy nadal nie mogą mieć pól instancji (stanu).
+    - Interfejsy wspierają wielokrotne dziedziczenie zachowania.
+    - Klasy abstrakcyjne mogą mieć konstruktory, pola i metody niepubliczne.
+    - Używaj interfejsów do definiowania typów/kontraktów; klas abstrakcyjnych
+      do współdzielenia stanu i częściowej implementacji między pokrewnymi klasami.
 */
 
 // ============================================================
-// Section 2: New Date/Time API (java.time)
+// Sekcja 2: Nowe API daty i czasu (java.time)
 // ============================================================
 
 /*
-## New Date/Time API (java.time)
+## Nowe API daty i czasu (java.time)
 
-- The legacy `java.util.Date` and `java.util.Calendar` classes had
-  serious design problems:
-    - **Mutable** — `Date` objects can be changed after creation,
-      leading to bugs in multi-threaded code.
-    - **Thread-unsafe** — `SimpleDateFormat` is not thread-safe.
-    - **Poor API design** — months are 0-based, year offset from 1900,
-      inconsistent naming, no clear separation of date vs time.
-- Java 8 introduced the `java.time` package (based on Joda-Time)
-  with a clean, **immutable**, **thread-safe** date/time API.
-- **Core classes**:
-    - `LocalDate` — date without time or timezone (e.g., 2024-03-15).
-    - `LocalTime` — time without date or timezone (e.g., 14:30:00).
-    - `LocalDateTime` — date + time without timezone.
-    - `ZonedDateTime` — date + time + timezone.
-    - `Instant` — machine timestamp (seconds + nanoseconds from epoch).
-- **Creating instances**: `now()`, `of(...)`, `parse("...")`.
-- **Manipulating**: `plusDays()`, `minusHours()`, `withMonth()` — all
-  return a **new** instance (immutability).
-- **`Period`** — date-based amount (years, months, days).
-  **`Duration`** — time-based amount (hours, minutes, seconds, nanos).
-- **`DateTimeFormatter`** — thread-safe replacement for `SimpleDateFormat`.
-  Use `ofPattern()` for custom formats, or predefined constants
-  like `ISO_LOCAL_DATE`.
-- **Time zones**: `ZoneId` represents a time zone (e.g., "Europe/Warsaw").
-  `ZoneOffset` is a fixed offset from UTC (e.g., "+02:00").
-- **Legacy conversion**: `Date.toInstant()`, `Instant.atZone(zone)`,
-  `Date.from(instant)` bridge old and new APIs.
-- **Temporal adjusters**: `TemporalAdjusters` provides common
-  date manipulations like `firstDayOfMonth()`, `nextOrSame(DayOfWeek.MONDAY)`,
+- Starsze klasy `java.util.Date` i `java.util.Calendar` miały
+  poważne problemy projektowe:
+    - **Mutowalne** — obiekty `Date` mogą być zmieniane po utworzeniu,
+      prowadząc do błędów w kodzie wielowątkowym.
+    - **Niebezpieczne wątkowo** — `SimpleDateFormat` nie jest bezpieczny wątkowo.
+    - **Słaby projekt API** — miesiące numerowane od 0, rok przesunięty od 1900,
+      niespójne nazewnictwo, brak wyraźnego rozdzielenia daty i czasu.
+- Java 8 wprowadziła pakiet `java.time` (oparty na Joda-Time)
+  z czystym, **niezmiennym**, **bezpiecznym wątkowo** API daty/czasu.
+- **Główne klasy**:
+    - `LocalDate` — data bez czasu i strefy czasowej (np. 2024-03-15).
+    - `LocalTime` — czas bez daty i strefy czasowej (np. 14:30:00).
+    - `LocalDateTime` — data + czas bez strefy czasowej.
+    - `ZonedDateTime` — data + czas + strefa czasowa.
+    - `Instant` — znacznik czasu maszyny (sekundy + nanosekundy od epoki).
+- **Tworzenie instancji**: `now()`, `of(...)`, `parse("...")`.
+- **Manipulowanie**: `plusDays()`, `minusHours()`, `withMonth()` — wszystkie
+  zwracają **nową** instancję (niemutowalność).
+- **`Period`** — ilość oparta na dacie (lata, miesiące, dni).
+  **`Duration`** — ilość oparta na czasie (godziny, minuty, sekundy, nanosekundy).
+- **`DateTimeFormatter`** — bezpieczny wątkowo zamiennik `SimpleDateFormat`.
+  Użyj `ofPattern()` dla niestandardowych formatów lub predefiniowanych stałych
+  jak `ISO_LOCAL_DATE`.
+- **Strefy czasowe**: `ZoneId` reprezentuje strefę czasową (np. "Europe/Warsaw").
+  `ZoneOffset` to stałe przesunięcie od UTC (np. "+02:00").
+- **Konwersja z legacy**: `Date.toInstant()`, `Instant.atZone(zone)`,
+  `Date.from(instant)` łączą stare i nowe API.
+- **Dostosowania temporalne**: `TemporalAdjusters` dostarcza typowe
+  manipulacje datami jak `firstDayOfMonth()`, `nextOrSame(DayOfWeek.MONDAY)`,
   `lastDayOfYear()`.
 */
 
 // ============================================================
-// Section 3: StringJoiner
+// Sekcja 3: StringJoiner
 // ============================================================
 
 /*
 ## StringJoiner
 
-- `java.util.StringJoiner` (Java 8) constructs a sequence of
-  characters separated by a delimiter, with optional prefix and suffix.
-- **Constructor**: `new StringJoiner(delimiter)` or
+- `java.util.StringJoiner` (Java 8) konstruuje sekwencję
+  znaków oddzielonych separatorem, z opcjonalnym prefiksem i sufiksem.
+- **Konstruktor**: `new StringJoiner(delimiter)` lub
   `new StringJoiner(delimiter, prefix, suffix)`.
-- **`add(CharSequence)`** — appends an element.
-- **`toString()`** — returns the joined string.
-- **`setEmptyValue(CharSequence)`** — defines the string returned
-  when no elements have been added (default is `prefix + suffix`).
-- **`merge(StringJoiner)`** — merges the contents of another joiner
-  (without its prefix/suffix) into this one. Useful for parallel
-  operations.
-- **Related utilities**:
-    - `String.join(delimiter, elements)` — static convenience method
-      that uses `StringJoiner` internally. Best for simple cases.
-    - `Collectors.joining(delimiter, prefix, suffix)` — stream
-      collector variant. Best when working with streams.
-- **When to use which**:
-    - `String.join()` — quick one-liner for arrays/iterables.
-    - `StringJoiner` — when building incrementally, need prefix/suffix,
-      or need `merge()` for combining results.
-    - `Collectors.joining()` — inside stream pipelines.
-    - `StringBuilder` — when you need full control (no delimiter
-      pattern, complex conditional logic).
+- **`add(CharSequence)`** — dodaje element.
+- **`toString()`** — zwraca połączony łańcuch znaków.
+- **`setEmptyValue(CharSequence)`** — definiuje łańcuch zwracany,
+  gdy żadne elementy nie zostały dodane (domyślnie `prefix + suffix`).
+- **`merge(StringJoiner)`** — scala zawartość innego joinera
+  (bez jego prefiksu/sufiksu) do tego. Przydatne dla operacji
+  równoległych.
+- **Powiązane narzędzia**:
+    - `String.join(delimiter, elements)` — statyczna metoda wygody,
+      która wewnętrznie używa `StringJoiner`. Najlepsza dla prostych przypadków.
+    - `Collectors.joining(delimiter, prefix, suffix)` — wariant
+      kolektora strumieniowego. Najlepszy przy pracy ze strumieniami.
+- **Kiedy używać którego**:
+    - `String.join()` — szybki jednoliniowiec dla tablic/iterowalnych.
+    - `StringJoiner` — przy budowaniu przyrostowym, potrzebie prefiksu/sufiksu
+      lub potrzebie `merge()` do łączenia wyników.
+    - `Collectors.joining()` — wewnątrz potoków strumieniowych.
+    - `StringBuilder` — gdy potrzebujesz pełnej kontroli (brak wzorca
+      separatora, złożona logika warunkowa).
 */
 
 // ============================================================
-// Section 4: Nashorn JavaScript Engine
+// Sekcja 4: Silnik JavaScript Nashorn
 // ============================================================
 
 /*
-## Nashorn JavaScript Engine
+## Silnik JavaScript Nashorn
 
-- Java 8 introduced **Nashorn**, a high-performance JavaScript engine
-  that replaced the older Rhino engine. It compiled JavaScript to
-  Java bytecode for better performance.
-- **Deprecation**: Nashorn was deprecated in **Java 11** (JEP 335)
-  and **removed in Java 15** (JEP 372). On modern JVMs, the script
-  engine may not be available.
-- **`ScriptEngineManager`** — factory for obtaining script engines
-  by name ("nashorn", "javascript"), MIME type, or file extension.
-- **`ScriptEngine.eval(String)`** — evaluates a JavaScript expression
-  and returns the result as a Java object.
-- **`Bindings`** — a `Map<String, Object>` used to pass Java objects
-  to the script as global variables. Use `engine.put(key, value)`
-  or create a `Bindings` instance.
-- **`Invocable`** — interface for calling JavaScript functions from
-  Java. Cast `ScriptEngine` to `Invocable` and use
+- Java 8 wprowadziła **Nashorn**, wysokowydajny silnik JavaScript,
+  który zastąpił starszy silnik Rhino. Kompilował JavaScript do
+  bajtkodu Javy dla lepszej wydajności.
+- **Deprecjacja**: Nashorn został zdeprecjonowany w **Java 11** (JEP 335)
+  i **usunięty w Java 15** (JEP 372). Na nowoczesnych JVM silnik
+  skryptowy może nie być dostępny.
+- **`ScriptEngineManager`** — fabryka do uzyskiwania silników skryptowych
+  po nazwie ("nashorn", "javascript"), typie MIME lub rozszerzeniu pliku.
+- **`ScriptEngine.eval(String)`** — ewaluuje wyrażenie JavaScript
+  i zwraca wynik jako obiekt Java.
+- **`Bindings`** — `Map<String, Object>` używana do przekazywania obiektów Java
+  do skryptu jako zmiennych globalnych. Użyj `engine.put(key, value)`
+  lub utwórz instancję `Bindings`.
+- **`Invocable`** — interfejs do wywoływania funkcji JavaScript z
+  Javy. Rzutuj `ScriptEngine` na `Invocable` i użyj
   `invokeFunction(name, args...)`.
-- **Graceful handling**: always check if the engine is `null` before
-  use, as it won't be available on Java 15+. Wrap calls in try-catch
-  for `ScriptException`.
+- **Elegancka obsługa**: zawsze sprawdzaj, czy silnik nie jest `null` przed
+  użyciem, ponieważ nie będzie dostępny na Java 15+. Opakowuj wywołania
+  w try-catch dla `ScriptException`.
 */
 
 // ============================================================
-// Section 5: Type Annotations
+// Sekcja 5: Adnotacje typów
 // ============================================================
 
 /*
-## Type Annotations
+## Adnotacje typów
 
-- Before Java 8, annotations could only appear on **declarations**
-  (classes, methods, fields, parameters, etc.).
-- Java 8 expanded the `@Target` meta-annotation to include two new
-  element types: **`ElementType.TYPE_USE`** and
+- Przed Java 8 adnotacje mogły pojawiać się tylko na **deklaracjach**
+  (klasach, metodach, polach, parametrach, itp.).
+- Java 8 rozszerzyła meta-adnotację `@Target` o dwa nowe
+  typy elementów: **`ElementType.TYPE_USE`** i
   **`ElementType.TYPE_PARAMETER`**.
-- With `TYPE_USE`, annotations can appear wherever a **type** is used:
-    - Type casts: `(@NonNull String) obj`
+- Z `TYPE_USE` adnotacje mogą pojawiać się wszędzie tam, gdzie używany jest **typ**:
+    - Rzutowania typów: `(@NonNull String) obj`
     - `instanceof`: `obj instanceof @NonNull String`
-    - Generic type arguments: `List<@NonNull String>`
+    - Argumenty typów generycznych: `List<@NonNull String>`
     - `extends`/`implements`: `class Foo extends @Audited Bar`
-    - `throws` clauses: `void m() throws @Critical IOException`
-    - Object creation: `new @Interned String("hello")`
-    - Array types: `@NonNull String @Nullable []`
-- With `TYPE_PARAMETER`, annotations can appear on type parameters:
+    - Klauzule `throws`: `void m() throws @Critical IOException`
+    - Tworzenie obiektów: `new @Interned String("hello")`
+    - Typy tablicowe: `@NonNull String @Nullable []`
+- Z `TYPE_PARAMETER` adnotacje mogą pojawiać się na parametrach typów:
   `class Box<@NonEmpty T>`.
-- **Purpose**: type annotations enable **pluggable type systems**
-  and **static analysis** tools (like the Checker Framework) to
-  detect errors at compile time — null pointer exceptions,
-  concurrency bugs, tainted data, etc.
-- Type annotations have **no runtime effect by themselves** — they
-  are metadata consumed by annotation processors and static analyzers.
-- **Difference from declaration annotations**: declaration annotations
-  describe the element itself (e.g., `@Override` on a method);
-  type annotations describe the type usage (e.g., `@NonNull` on
-  a return type).
+- **Cel**: adnotacje typów umożliwiają **podłączalne systemy typów**
+  i narzędzia **analizy statycznej** (jak Checker Framework) do
+  wykrywania błędów w czasie kompilacji — wyjątki wskaźnika null,
+  błędy współbieżności, skażone dane, itp.
+- Adnotacje typów **same w sobie nie mają efektu w czasie wykonania** — są
+  metadanymi konsumowanymi przez procesory adnotacji i analizatory statyczne.
+- **Różnica od adnotacji deklaracji**: adnotacje deklaracji
+  opisują sam element (np. `@Override` na metodzie);
+  adnotacje typów opisują użycie typu (np. `@NonNull` na
+  typie zwracanym).
 */
 
 // ============================================================
-// Section 6: Repeating Annotations
+// Sekcja 6: Powtarzalne adnotacje
 // ============================================================
 
 /*
-## Repeating Annotations
+## Powtarzalne adnotacje
 
-- Before Java 8, applying the **same annotation** multiple times
-  to a single element was not allowed:
+- Przed Java 8 stosowanie **tej samej adnotacji** wielokrotnie
+  na pojedynczym elemencie nie było dozwolone:
   ```
   @Schedule(day = "Mon")
-  @Schedule(day = "Fri")  // compile error before Java 8!
+  @Schedule(day = "Fri")  // błąd kompilacji przed Java 8!
   void backup() {}
   ```
-- The workaround was a **container annotation** holding an array:
+- Obejściem była **adnotacja kontenera** przechowująca tablicę:
   `@Schedules({@Schedule(day="Mon"), @Schedule(day="Fri")})`.
-- Java 8 introduced **`@Repeatable`** — a meta-annotation that
-  declares which container annotation wraps the repeated values.
-- **Defining a repeating annotation**:
-    1. Create the repeating annotation with `@Repeatable(Container.class)`.
-    2. Create the container annotation with a `value()` method
-       returning an array of the repeating annotation.
-- **Retrieving at runtime**:
-    - `getAnnotationsByType(RepeatableAnnotation.class)` — returns
-      all instances (unwraps the container automatically).
-    - `getAnnotation(Container.class)` — returns the container
-      if present.
-    - `getDeclaredAnnotationsByType(...)` — same but ignores
-      inherited annotations.
-- This feature simplifies APIs that naturally allow multiple
-  applications: scheduling rules, security roles, validation
-  constraints, event listeners, etc.
+- Java 8 wprowadziła **`@Repeatable`** — meta-adnotację, która
+  deklaruje, która adnotacja kontenera opakowuje powtarzane wartości.
+- **Definiowanie powtarzalnej adnotacji**:
+    1. Utwórz powtarzalną adnotację z `@Repeatable(Container.class)`.
+    2. Utwórz adnotację kontenera z metodą `value()` zwracającą
+       tablicę powtarzalnej adnotacji.
+- **Pobieranie w czasie wykonania**:
+    - `getAnnotationsByType(RepeatableAnnotation.class)` — zwraca
+      wszystkie instancje (automatycznie rozpakowuje kontener).
+    - `getAnnotation(Container.class)` — zwraca kontener,
+      jeśli jest obecny.
+    - `getDeclaredAnnotationsByType(...)` — to samo, ale ignoruje
+      adnotacje odziedziczone.
+- Ta funkcja upraszcza API, które naturalnie pozwalają na wielokrotne
+  zastosowania: reguły harmonogramowania, role bezpieczeństwa, ograniczenia
+  walidacji, nasłuchiwacze zdarzeń, itp.
 */
 
 public class OtherChanges {
 
-    // ---- Helper interfaces for Section 1 (Default Methods) ----
+    // ---- Pomocnicze interfejsy dla Sekcji 1 (Metody domyślne) ----
 
     interface Greeter {
         String greet(String name);
@@ -243,12 +243,12 @@ public class OtherChanges {
         }
     }
 
-    // Diamond problem: both Logging and Auditing have default log()
-    // The class MUST override and resolve the conflict
+    // Problem diamentu: zarówno Logging jak i Auditing mają domyślną log()
+    // Klasa MUSI nadpisać i rozwiązać konflikt
     static class AuditedLogger implements Logging, Auditing {
         @Override
         public void log(String message) {
-            // Explicitly choose which default to delegate to
+            // Jawny wybór, do której domyślnej delegować
             Logging.super.log(message);
             Auditing.super.log(message);
         }
@@ -261,7 +261,7 @@ public class OtherChanges {
     }
 
     interface Resizable extends Drawable {
-        // More specific interface — its default wins over Drawable's
+        // Bardziej specyficzny interfejs — jego domyślna wygrywa z Drawable
         @Override
         default String draw() {
             return "Drawing resizable shape";
@@ -272,7 +272,7 @@ public class OtherChanges {
         }
     }
 
-    // ---- Helper annotations for Section 5 (Type Annotations) ----
+    // ---- Pomocnicze adnotacje dla Sekcji 5 (Adnotacje typów) ----
 
     @Target(ElementType.TYPE_USE)
     @Retention(RetentionPolicy.RUNTIME)
@@ -286,7 +286,7 @@ public class OtherChanges {
     @Retention(RetentionPolicy.RUNTIME)
     @interface NonEmpty {}
 
-    // ---- Helper annotations for Section 6 (Repeating Annotations) ----
+    // ---- Pomocnicze adnotacje dla Sekcji 6 (Powtarzalne adnotacje) ----
 
     @Repeatable(Schedules.class)
     @Target(ElementType.METHOD)
@@ -315,7 +315,7 @@ public class OtherChanges {
         Role[] value();
     }
 
-    // Annotated methods for Section 6 demonstration
+    // Zaadnotowane metody do demonstracji Sekcji 6
     @Schedule(day = "Monday", task = "full backup")
     @Schedule(day = "Wednesday", task = "incremental backup")
     @Schedule(day = "Friday", task = "full backup")
@@ -330,19 +330,19 @@ public class OtherChanges {
     }
 
     // ============================================================
-    // Section 1: Default Methods in Interfaces
+    // Sekcja 1: Metody domyślne w interfejsach
     // ============================================================
 
     static void defaultMethodsInInterfaces() {
         System.out.println("=== Default Methods in Interfaces ===");
 
-        // Implementing an interface with a default method
+        // Implementacja interfejsu z metodą domyślną
         Greeter politeGreeter = name -> "Good day, " + name;
         System.out.println(politeGreeter.greet("Alice"));
-        // Using the default method — no need to implement it
+        // Użycie metody domyślnej — nie trzeba jej implementować
         System.out.println(politeGreeter.greetLoudly("Alice"));
 
-        // Overriding the default method
+        // Nadpisanie metody domyślnej
         Greeter casualGreeter = new Greeter() {
             @Override
             public String greet(String name) {
@@ -351,34 +351,34 @@ public class OtherChanges {
 
             @Override
             public String greetLoudly(String name) {
-                return greet(name) + "!!!"; // custom override
+                return greet(name) + "!!!"; // niestandardowe nadpisanie
             }
         };
         System.out.println(casualGreeter.greet("Bob"));
         System.out.println(casualGreeter.greetLoudly("Bob"));
 
-        // Static methods on interfaces
+        // Metody statyczne w interfejsach
         System.out.println(Greeter.defaultGreeting());
 
-        // Diamond problem resolution — AuditedLogger implements both Logging and Auditing
+        // Rozwiązanie problemu diamentu — AuditedLogger implementuje zarówno Logging jak i Auditing
         AuditedLogger logger = new AuditedLogger();
-        logger.log("user login"); // calls both Logging.super.log and Auditing.super.log
+        logger.log("user login"); // wywołuje zarówno Logging.super.log jak i Auditing.super.log
 
-        // More specific interface wins — Resizable extends Drawable
+        // Bardziej specyficzny interfejs wygrywa — Resizable rozszerza Drawable
         Resizable shape = new Resizable() {};
-        System.out.println(shape.draw());    // "Drawing resizable shape" — sub-interface wins
+        System.out.println(shape.draw());    // "Drawing resizable shape" — wygrywa podinterfejs
         System.out.println(shape.resize(3));
 
-        // Real-world default methods: Collection.forEach, Comparator.comparing
+        // Rzeczywiste metody domyślne: Collection.forEach, Comparator.comparing
         List<String> names = new ArrayList<>(Arrays.asList("Charlie", "Alice", "Bob"));
-        names.forEach(n -> System.out.print("  " + n)); // forEach is a default method on Iterable
+        names.forEach(n -> System.out.print("  " + n)); // forEach to metoda domyślna na Iterable
         System.out.println();
 
-        // Comparator.comparing — static method + default thenComparing
+        // Comparator.comparing — metoda statyczna + domyślna thenComparing
         names.sort(Comparator.comparing(String::length).thenComparing(Comparator.naturalOrder()));
         System.out.println("sorted by length then alphabetically: " + names);
 
-        // Map.getOrDefault, Map.putIfAbsent — default methods added in Java 8
+        // Map.getOrDefault, Map.putIfAbsent — metody domyślne dodane w Java 8
         Map<String, Integer> scores = new HashMap<>();
         scores.put("Alice", 95);
         System.out.println("getOrDefault (Alice): " + scores.getOrDefault("Alice", 0));
@@ -386,13 +386,13 @@ public class OtherChanges {
     }
 
     // ============================================================
-    // Section 2: New Date/Time API (java.time)
+    // Sekcja 2: Nowe API daty i czasu (java.time)
     // ============================================================
 
     static void dateTimeApi() {
         System.out.println("\n=== New Date/Time API (java.time) ===");
 
-        // LocalDate — date without time or timezone
+        // LocalDate — data bez czasu i strefy czasowej
         LocalDate today = LocalDate.now();
         LocalDate specificDate = LocalDate.of(2024, 3, 15);
         LocalDate parsedDate = LocalDate.parse("2024-12-25");
@@ -400,7 +400,7 @@ public class OtherChanges {
         System.out.println("specific date: " + specificDate);
         System.out.println("parsed date: " + parsedDate);
 
-        // LocalTime — time without date or timezone
+        // LocalTime — czas bez daty i strefy czasowej
         LocalTime now = LocalTime.now();
         LocalTime specificTime = LocalTime.of(14, 30, 0);
         LocalTime parsedTime = LocalTime.parse("09:15:30");
@@ -408,11 +408,11 @@ public class OtherChanges {
         System.out.println("specific time: " + specificTime);
         System.out.println("parsed time: " + parsedTime);
 
-        // LocalDateTime — date + time without timezone
+        // LocalDateTime — data + czas bez strefy czasowej
         LocalDateTime dateTime = LocalDateTime.of(specificDate, specificTime);
         System.out.println("date + time: " + dateTime);
 
-        // Manipulating dates — immutable, returns new instances
+        // Manipulowanie datami — niezmienne, zwracają nowe instancje
         LocalDate tomorrow = today.plusDays(1);
         LocalDate lastMonth = today.minusMonths(1);
         LocalDate withDifferentDay = today.withDayOfMonth(1);
@@ -420,11 +420,11 @@ public class OtherChanges {
         System.out.println("last month: " + lastMonth);
         System.out.println("first of this month: " + withDifferentDay);
 
-        // Manipulating times
+        // Manipulowanie czasem
         LocalTime later = specificTime.plusHours(2).plusMinutes(30);
         System.out.println("14:30 + 2h30m: " + later);
 
-        // Period — date-based amount (years, months, days)
+        // Period — ilość oparta na dacie (lata, miesiące, dni)
         Period period = Period.between(specificDate, parsedDate);
         System.out.println("period from " + specificDate + " to " + parsedDate + ": " + period);
         System.out.println("  = " + period.getMonths() + " months and " + period.getDays() + " days");
@@ -432,7 +432,7 @@ public class OtherChanges {
         Period twoWeeks = Period.ofWeeks(2);
         System.out.println("two weeks from today: " + today.plus(twoWeeks));
 
-        // Duration — time-based amount (hours, minutes, seconds, nanos)
+        // Duration — ilość oparta na czasie (godziny, minuty, sekundy, nanosekundy)
         Duration duration = Duration.ofHours(2).plusMinutes(30);
         System.out.println("duration: " + duration);
         System.out.println("duration in minutes: " + duration.toMinutes());
@@ -440,12 +440,12 @@ public class OtherChanges {
         Duration between = Duration.between(LocalTime.of(9, 0), LocalTime.of(17, 30));
         System.out.println("work day duration: " + between);
 
-        // Instant — machine timestamp (epoch-based)
+        // Instant — znacznik czasu maszyny (oparty na epoce)
         Instant instant = Instant.now();
         System.out.println("instant (epoch seconds): " + instant.getEpochSecond());
         System.out.println("instant: " + instant);
 
-        // DateTimeFormatter — formatting and parsing
+        // DateTimeFormatter — formatowanie i parsowanie
         DateTimeFormatter customFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
         String formatted = dateTime.format(customFormatter);
         System.out.println("formatted: " + formatted);
@@ -453,33 +453,33 @@ public class OtherChanges {
         LocalDateTime reparsed = LocalDateTime.parse(formatted, customFormatter);
         System.out.println("reparsed: " + reparsed);
 
-        // Predefined formatters
+        // Predefiniowane formattery
         System.out.println("ISO_LOCAL_DATE: " + today.format(DateTimeFormatter.ISO_LOCAL_DATE));
 
-        // ZonedDateTime — date + time + timezone
+        // ZonedDateTime — data + czas + strefa czasowa
         ZonedDateTime warsawTime = ZonedDateTime.now(ZoneId.of("Europe/Warsaw"));
         ZonedDateTime tokyoTime = warsawTime.withZoneSameInstant(ZoneId.of("Asia/Tokyo"));
         System.out.println("Warsaw: " + warsawTime.format(DateTimeFormatter.ofPattern("HH:mm z")));
         System.out.println("Tokyo:  " + tokyoTime.format(DateTimeFormatter.ofPattern("HH:mm z")));
 
-        // ZoneId — listing available zones
+        // ZoneId — listowanie dostępnych stref
         System.out.println("available zones (sample): " + ZoneId.getAvailableZoneIds().stream()
                 .filter(z -> z.startsWith("Europe/"))
                 .sorted()
                 .limit(5)
                 .collect(Collectors.joining(", ")));
 
-        // Converting from legacy Date
+        // Konwersja ze starszego Date
         java.util.Date legacyDate = new java.util.Date();
         Instant fromLegacy = legacyDate.toInstant();
         LocalDateTime converted = fromLegacy.atZone(ZoneId.systemDefault()).toLocalDateTime();
         System.out.println("legacy Date -> LocalDateTime: " + converted);
 
-        // Converting back to legacy Date
+        // Konwersja z powrotem do starszego Date
         java.util.Date backToLegacy = java.util.Date.from(instant);
         System.out.println("Instant -> legacy Date: " + backToLegacy);
 
-        // Temporal adjusters — common date manipulations
+        // Dostosowania temporalne — typowe manipulacje datami
         LocalDate firstDayOfMonth = today.with(TemporalAdjusters.firstDayOfMonth());
         LocalDate lastDayOfMonth = today.with(TemporalAdjusters.lastDayOfMonth());
         LocalDate nextMonday = today.with(TemporalAdjusters.nextOrSame(DayOfWeek.MONDAY));
@@ -489,46 +489,46 @@ public class OtherChanges {
         System.out.println("next Monday: " + nextMonday);
         System.out.println("first day of next year: " + firstDayOfNextYear);
 
-        // ChronoUnit — measuring distances between temporal objects
+        // ChronoUnit — mierzenie odległości między obiektami temporalnymi
         long daysBetween = ChronoUnit.DAYS.between(specificDate, parsedDate);
         System.out.println("days between " + specificDate + " and " + parsedDate + ": " + daysBetween);
     }
 
     // ============================================================
-    // Section 3: StringJoiner
+    // Sekcja 3: StringJoiner
     // ============================================================
 
     static void stringJoiner() {
         System.out.println("\n=== StringJoiner ===");
 
-        // Basic StringJoiner with delimiter
+        // Podstawowy StringJoiner z separatorem
         StringJoiner joiner = new StringJoiner(", ");
         joiner.add("apple");
         joiner.add("banana");
         joiner.add("cherry");
         System.out.println("basic joiner: " + joiner);
 
-        // StringJoiner with delimiter, prefix, and suffix
+        // StringJoiner z separatorem, prefiksem i sufiksem
         StringJoiner jsonArray = new StringJoiner(", ", "[", "]");
         jsonArray.add("\"one\"");
         jsonArray.add("\"two\"");
         jsonArray.add("\"three\"");
         System.out.println("with prefix/suffix: " + jsonArray);
 
-        // Empty joiner — returns prefix + suffix by default
+        // Pusty joiner — domyślnie zwraca prefix + suffix
         StringJoiner empty = new StringJoiner(", ", "(", ")");
         System.out.println("empty joiner: " + empty); // "()"
 
-        // setEmptyValue — custom string for empty joiner
+        // setEmptyValue — niestandardowy łańcuch dla pustego joinera
         StringJoiner emptyWithDefault = new StringJoiner(", ", "[", "]");
         emptyWithDefault.setEmptyValue("[]  (no elements)");
         System.out.println("empty with setEmptyValue: " + emptyWithDefault);
 
-        // After adding elements, setEmptyValue has no effect
+        // Po dodaniu elementów setEmptyValue nie ma efektu
         emptyWithDefault.add("item");
         System.out.println("after add: " + emptyWithDefault);
 
-        // merge — combining two joiners
+        // merge — łączenie dwóch joinerów
         StringJoiner fruits = new StringJoiner(", ");
         fruits.add("apple");
         fruits.add("banana");
@@ -537,31 +537,31 @@ public class OtherChanges {
         vegs.add("carrot");
         vegs.add("pea");
 
-        fruits.merge(vegs); // merges contents, not prefix/suffix of the other joiner
+        fruits.merge(vegs); // scala zawartość, nie prefiks/sufiks drugiego joinera
         System.out.println("after merge: " + fruits);
 
-        // String.join — static convenience method (uses StringJoiner internally)
+        // String.join — statyczna metoda wygody (wewnętrznie używa StringJoiner)
         String joined = String.join(" | ", "alpha", "beta", "gamma");
         System.out.println("String.join: " + joined);
 
-        // String.join with a collection
+        // String.join z kolekcją
         List<String> items = List.of("one", "two", "three");
         String joinedList = String.join(", ", items);
         System.out.println("String.join (list): " + joinedList);
 
-        // Collectors.joining — stream collector variant
+        // Collectors.joining — wariant kolektora strumieniowego
         String streamJoined = items.stream()
                 .map(String::toUpperCase)
                 .collect(Collectors.joining(" - ", "<<", ">>"));
         System.out.println("Collectors.joining: " + streamJoined);
 
-        // Practical example: building a SQL IN clause
+        // Praktyczny przykład: budowanie klauzuli SQL IN
         List<String> ids = List.of("101", "102", "103", "104");
         StringJoiner inClause = new StringJoiner(", ", "WHERE id IN (", ")");
         ids.forEach(inClause::add);
         System.out.println("SQL IN clause: " + inClause);
 
-        // Practical example: building CSV line
+        // Praktyczny przykład: budowanie linii CSV
         StringJoiner csv = new StringJoiner(",");
         csv.add("John");
         csv.add("Doe");
@@ -571,18 +571,18 @@ public class OtherChanges {
     }
 
     // ============================================================
-    // Section 4: Nashorn JavaScript Engine
+    // Sekcja 4: Silnik JavaScript Nashorn
     // ============================================================
 
     static void nashornJavaScriptEngine() {
         System.out.println("\n=== Nashorn JavaScript Engine ===");
 
-        // Nashorn was introduced in Java 8, deprecated in Java 11, removed in Java 15.
-        // On modern JVMs, the engine may not be available.
+        // Nashorn został wprowadzony w Java 8, zdeprecjonowany w Java 11, usunięty w Java 15.
+        // Na nowoczesnych JVM silnik może nie być dostępny.
         ScriptEngineManager manager = new ScriptEngineManager();
         ScriptEngine engine = manager.getEngineByName("nashorn");
 
-        // Fallback: try "javascript" if "nashorn" is not found
+        // Zapasowo: spróbuj "javascript" jeśli "nashorn" nie zostanie znaleziony
         if (engine == null) {
             engine = manager.getEngineByName("javascript");
         }
@@ -592,7 +592,7 @@ public class OtherChanges {
             System.out.println("  Nashorn was deprecated in Java 11 and removed in Java 15.");
             System.out.println("  Alternatives: GraalJS (GraalVM), or standalone JS runtimes.");
 
-            // Show available engines
+            // Wyświetl dostępne silniki
             System.out.print("  Available engines: ");
             List<ScriptEngineFactory> factories = manager.getEngineFactories();
             if (factories.isEmpty()) {
@@ -608,20 +608,20 @@ public class OtherChanges {
                 + " " + engine.getFactory().getEngineVersion());
 
         try {
-            // Evaluating simple JavaScript expressions
+            // Ewaluacja prostych wyrażeń JavaScript
             Object result = engine.eval("1 + 2");
             System.out.println("  eval('1 + 2'): " + result);
 
             result = engine.eval("'Hello'.length");
             System.out.println("  eval(\"'Hello'.length\"): " + result);
 
-            // Passing Java objects to JavaScript via Bindings
+            // Przekazywanie obiektów Java do JavaScript przez Bindings
             engine.put("name", "Java");
             engine.put("version", 8);
             result = engine.eval("'Hello from ' + name + ' ' + version");
             System.out.println("  with bindings: " + result);
 
-            // Evaluating a multi-line script
+            // Ewaluacja wieloliniowego skryptu
             String script = """
                     var items = ['apple', 'banana', 'cherry'];
                     var result = '';
@@ -634,7 +634,7 @@ public class OtherChanges {
             result = engine.eval(script);
             System.out.println("  multi-line script: " + result);
 
-            // Calling JavaScript functions from Java using Invocable
+            // Wywoływanie funkcji JavaScript z Javy za pomocą Invocable
             engine.eval("function add(a, b) { return a + b; }");
             engine.eval("function greet(name) { return 'Hello, ' + name + '!'; }");
 
@@ -654,15 +654,15 @@ public class OtherChanges {
     }
 
     // ============================================================
-    // Section 5: Type Annotations
+    // Sekcja 5: Adnotacje typów
     // ============================================================
 
-    // Example: method with type annotations
+    // Przykład: metoda z adnotacjami typów
     static @NonNull String getGreeting(@NonNull String name) {
         return "Hello, " + name;
     }
 
-    // Example: generic class with type parameter annotation
+    // Przykład: klasa generyczna z adnotacją parametru typu
     static class Box<@NonEmpty T> {
         private final T value;
 
@@ -678,36 +678,36 @@ public class OtherChanges {
     static void typeAnnotations() {
         System.out.println("\n=== Type Annotations ===");
 
-        // Type annotation on variable declaration
+        // Adnotacja typu na deklaracji zmiennej
         @NonNull String message = "This is annotated as non-null";
         System.out.println("annotated variable: " + message);
 
-        // Type annotation on method return type (see getGreeting above)
+        // Adnotacja typu na typie zwracanym metody (zobacz getGreeting powyżej)
         System.out.println("annotated method: " + getGreeting("Alice"));
 
-        // Type annotation on generic type argument
+        // Adnotacja typu na argumencie typu generycznego
         List<@NonNull String> names = new ArrayList<>();
         names.add("Alice");
         names.add("Bob");
         System.out.println("annotated generics: " + names);
 
-        // Type annotation on type parameter (see Box class above)
+        // Adnotacja typu na parametrze typu (zobacz klasę Box powyżej)
         Box<@NonNull String> box = new Box<>("contents");
         System.out.println("annotated type parameter: " + box.getValue());
 
-        // Type annotation on cast
+        // Adnotacja typu na rzutowaniu
         Object obj = "hello";
         String casted = (@NonNull String) obj;
         System.out.println("annotated cast: " + casted);
 
-        // Type annotation on array creation
+        // Adnotacja typu na tworzeniu tablicy
         @NonNull String @Validated [] array = new @NonNull String[3];
         array[0] = "first";
         array[1] = "second";
         array[2] = "third";
         System.out.println("annotated array: " + Arrays.toString(array));
 
-        // Inspecting type annotations via reflection
+        // Inspekcja adnotacji typów za pomocą refleksji
         try {
             Method method = OtherChanges.class.getDeclaredMethod("getGreeting", String.class);
             Annotation[] returnAnnotations = method.getAnnotatedReturnType().getAnnotations();
@@ -716,7 +716,7 @@ public class OtherChanges {
                 System.out.println("  " + a);
             }
 
-            // Check parameter type annotations
+            // Sprawdzanie adnotacji typów parametrów
             var paramAnnotations = method.getAnnotatedParameterTypes();
             for (var param : paramAnnotations) {
                 System.out.println("annotations on parameter type: ");
@@ -728,38 +728,38 @@ public class OtherChanges {
             System.out.println("  reflection error: " + e.getMessage());
         }
 
-        // Defining and using custom type annotations for static analysis
+        // Definiowanie i używanie niestandardowych adnotacji typów do analizy statycznej
         System.out.println("  (Type annotations are metadata — they enable tools like");
         System.out.println("   the Checker Framework to detect null pointer errors,");
         System.out.println("   concurrency bugs, and tainted data at compile time.)");
     }
 
     // ============================================================
-    // Section 6: Repeating Annotations
+    // Sekcja 6: Powtarzalne adnotacje
     // ============================================================
 
     static void repeatingAnnotations() {
         System.out.println("\n=== Repeating Annotations ===");
 
-        // Retrieve repeating @Schedule annotations from performBackup()
+        // Pobieranie powtarzalnych adnotacji @Schedule z performBackup()
         try {
             Method backupMethod = OtherChanges.class.getDeclaredMethod("performBackup");
 
-            // getAnnotationsByType — unwraps the container automatically
+            // getAnnotationsByType — automatycznie rozpakowuje kontener
             Schedule[] schedules = backupMethod.getAnnotationsByType(Schedule.class);
             System.out.println("@Schedule annotations on performBackup():");
             for (Schedule s : schedules) {
                 System.out.println("  day=" + s.day() + ", task=" + s.task());
             }
 
-            // getAnnotation with the container type
+            // getAnnotation z typem kontenera
             Schedules container = backupMethod.getAnnotation(Schedules.class);
             if (container != null) {
                 System.out.println("container annotation present: @Schedules with "
                         + container.value().length + " entries");
             }
 
-            // Retrieve repeating @Role annotations from manageDatabase()
+            // Pobieranie powtarzalnych adnotacji @Role z manageDatabase()
             Method dbMethod = OtherChanges.class.getDeclaredMethod("manageDatabase");
             Role[] roles = dbMethod.getAnnotationsByType(Role.class);
             System.out.println("@Role annotations on manageDatabase():");
@@ -767,7 +767,7 @@ public class OtherChanges {
                 System.out.println("  role=" + r.value());
             }
 
-            // Check if the container is present
+            // Sprawdzanie czy kontener jest obecny
             Roles rolesContainer = dbMethod.getAnnotation(Roles.class);
             if (rolesContainer != null) {
                 System.out.println("container annotation present: @Roles with "
@@ -778,7 +778,7 @@ public class OtherChanges {
             System.out.println("  reflection error: " + e.getMessage());
         }
 
-        // Practical usage: simulating a scheduler that reads annotations
+        // Praktyczne zastosowanie: symulacja harmonogramu odczytującego adnotacje
         System.out.println("simulated scheduler:");
         try {
             Method backupMethod = OtherChanges.class.getDeclaredMethod("performBackup");
@@ -791,7 +791,7 @@ public class OtherChanges {
     }
 
     // ============================================================
-    // Main — run all sections
+    // Main — uruchomienie wszystkich sekcji
     // ============================================================
 
     public static void main(String[] args) {

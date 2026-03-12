@@ -5,7 +5,7 @@ import java.util.stream.*;
 
 public class Exercises {
 
-    // ---- Helper types for Exercise 1: API Response Report ----
+    // ---- Typy pomocnicze do Ćwiczenia 1: Raport odpowiedzi API ----
 
     sealed interface ApiResponse<T> permits ApiResponse.Success, ApiResponse.ClientError,
             ApiResponse.ServerError, ApiResponse.Timeout {
@@ -15,7 +15,7 @@ public class Exercises {
         record Timeout<T>(long durationMs) implements ApiResponse<T> {}
     }
 
-    // ---- Helper types for Exercise 2: Expression Tree Evaluator ----
+    // ---- Typy pomocnicze do Ćwiczenia 2: Ewaluator drzewa wyrażeń ----
 
     sealed interface Expr permits Expr.Literal, Expr.Var, Expr.BinOp, Expr.UnaryOp {
         record Literal(double value) implements Expr {}
@@ -24,7 +24,7 @@ public class Exercises {
         record UnaryOp(String operator, Expr operand) implements Expr {}
     }
 
-    // ---- Helper types for Exercise 3: Notification Dispatcher ----
+    // ---- Typy pomocnicze do Ćwiczenia 3: Dispatcher powiadomień ----
 
     sealed interface Notification permits Notification.Email, Notification.Sms,
             Notification.Push, Notification.Slack {
@@ -35,13 +35,13 @@ public class Exercises {
     }
 
     // ============================================================
-    // Exercise 1: API Response Report Renderer
+    // Ćwiczenie 1: Renderer raportu odpowiedzi API
     // ============================================================
 
     /**
-     * Render a list of API responses into a formatted monitoring report.
+     * Renderuje listę odpowiedzi API w sformatowany raport monitoringu.
      *
-     * <p>For each {@link ApiResponse}, produce a line describing it:</p>
+     * <p>Dla każdego {@link ApiResponse} generuje linię opisującą go:</p>
      * <ul>
      *   <li>{@code Success}: {@code "[OK 200] Body: ..."}</li>
      *   <li>{@code ClientError}: {@code "[CLIENT_ERR 404] ..."}</li>
@@ -49,7 +49,7 @@ public class Exercises {
      *   <li>{@code Timeout}: {@code "[TIMEOUT 1500ms]"}</li>
      * </ul>
      *
-     * <p>Combine all lines into a report using a text block header:</p>
+     * <p>Połącz wszystkie linie w raport używając nagłówka z bloku tekstowego:</p>
      * <pre>{@code
      * === API Monitoring Report ===
      * Total: 4 | Success: 2 | Errors: 1 | Timeouts: 1
@@ -59,59 +59,59 @@ public class Exercises {
      * ...
      * }</pre>
      *
-     * <p><b>Hints:</b> Use a switch expression over the sealed {@code ApiResponse}
-     * hierarchy, records for pattern matching, text blocks with {@code .formatted()},
-     * and streams to count categories.</p>
+     * <p><b>Wskazówki:</b> Użyj wyrażenia switch na zapieczętowanej hierarchii {@code ApiResponse},
+     * record do dopasowywania wzorców, bloków tekstowych z {@code .formatted()},
+     * oraz Stream do zliczania kategorii.</p>
      */
     static String renderReport(List<ApiResponse<?>> responses) {
         throw new UnsupportedOperationException();
     }
 
     // ============================================================
-    // Exercise 2: Expression Tree Evaluator
+    // Ćwiczenie 2: Ewaluator drzewa wyrażeń
     // ============================================================
 
     /**
-     * Evaluate a recursive expression tree with variable bindings.
+     * Oblicza rekurencyjne drzewo wyrażeń z wiązaniami zmiennych.
      *
-     * <p>Given an {@link Expr} tree and a {@code Map<String, Double>} of variable
-     * bindings, compute the numeric result. Supported operations:</p>
+     * <p>Dla danego drzewa {@link Expr} i {@code Map<String, Double>} wiązań
+     * zmiennych, oblicza wynik numeryczny. Obsługiwane operacje:</p>
      * <ul>
-     *   <li>{@code Literal}: return its value directly</li>
-     *   <li>{@code Var}: look up the variable name in the bindings map;
-     *       throw {@code IllegalArgumentException} if not found</li>
-     *   <li>{@code BinOp}: supports {@code "+"}, {@code "-"}, {@code "*"}, {@code "/"}</li>
-     *   <li>{@code UnaryOp}: supports {@code "-"} (negation) and {@code "abs"}</li>
+     *   <li>{@code Literal}: zwraca wartość bezpośrednio</li>
+     *   <li>{@code Var}: wyszukuje nazwę zmiennej w mapie wiązań;
+     *       rzuca {@code IllegalArgumentException} jeśli nie znaleziono</li>
+     *   <li>{@code BinOp}: obsługuje {@code "+"}, {@code "-"}, {@code "*"}, {@code "/"}</li>
+     *   <li>{@code UnaryOp}: obsługuje {@code "-"} (negacja) i {@code "abs"}</li>
      * </ul>
      *
-     * <p><b>Hints:</b> Use an exhaustive switch expression over the sealed
-     * {@code Expr} hierarchy. Use {@code yield} for multi-line cases.
-     * Recurse for {@code BinOp} and {@code UnaryOp}.</p>
+     * <p><b>Wskazówki:</b> Użyj wyczerpującego wyrażenia switch na zapieczętowanej
+     * hierarchii {@code Expr}. Użyj {@code yield} dla wieloliniowych przypadków.
+     * Wywołuj rekurencyjnie dla {@code BinOp} i {@code UnaryOp}.</p>
      */
     static double evaluate(Expr expr, Map<String, Double> variables) {
         throw new UnsupportedOperationException();
     }
 
     // ============================================================
-    // Exercise 3: Notification Dispatcher
+    // Ćwiczenie 3: Dispatcher powiadomień
     // ============================================================
 
     /**
-     * Format delivery instructions for a notification.
+     * Formatuje instrukcje dostarczenia dla powiadomienia.
      *
-     * <p>Given a {@link Notification}, return a formatted instruction string:</p>
+     * <p>Dla danego {@link Notification}, zwraca sformatowany ciąg instrukcji:</p>
      * <ul>
      *   <li>{@code Email}: {@code "SEND EMAIL to <to>\nSubject: <subject>\nBody: <body>"}</li>
      *   <li>{@code Sms}: {@code "SEND SMS to <phone>\nMessage: <message>"};
-     *       if the message exceeds 160 characters, append {@code "\n[WARN: message truncated]"}</li>
+     *       jeśli wiadomość przekracza 160 znaków, dołącz {@code "\n[WARN: message truncated]"}</li>
      *   <li>{@code Push}: {@code "PUSH to device <token>\nTitle: <title>\nPayload: <payload>"}</li>
      *   <li>{@code Slack}: {@code "POST to #<channel>\nMessage: <message>"};
-     *       if {@code urgent}, prepend {@code "[URGENT] "} to the message</li>
+     *       jeśli {@code urgent}, dodaj {@code "[URGENT] "} przed wiadomością</li>
      * </ul>
      *
-     * <p><b>Hints:</b> Use a switch expression over the sealed hierarchy,
-     * pattern matching for instanceof for the truncation/urgency checks,
-     * text blocks for multi-line output, and records for deconstruction.</p>
+     * <p><b>Wskazówki:</b> Użyj wyrażenia switch na zapieczętowanej hierarchii,
+     * dopasowywania wzorców dla instanceof do sprawdzania obcinania/pilności,
+     * bloków tekstowych dla wieloliniowego wyjścia, oraz record do dekonstrukcji.</p>
      */
     static String formatDispatchInstruction(Notification notification) {
         throw new UnsupportedOperationException();

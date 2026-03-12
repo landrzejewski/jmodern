@@ -9,183 +9,183 @@ import java.util.regex.Pattern;
 import java.util.stream.*;
 
 // ============================================================
-// Section 1: Local Variable Type Inference (var)
+// Sekcja 1: Wnioskowanie typów zmiennych lokalnych (var)
 // ============================================================
 
 /*
-## Local Variable Type Inference (var)
+## Wnioskowanie typów zmiennych lokalnych (var)
 
-- `var` (Java 10) lets the compiler infer the type of a local
-  variable from the initializer expression on the right-hand side.
-  It is **syntactic sugar** — the variable is still statically typed
-  at compile time, exactly as if you had written the type explicitly.
-- `var` is **not a keyword** — it is a "reserved type name". You can
-  still use `var` as a variable name, method name, or package name
-  (but not as a class or interface name). This was done for backward
-  compatibility with existing code that used `var` as an identifier.
-- **Where you CAN use `var`**:
-    - Local variables with initializers: `var list = new ArrayList<String>()`
-    - Enhanced for-loop variables: `for (var item : collection)`
-    - Traditional for-loop index: `for (var i = 0; i < 10; i++)`
-    - Try-with-resources variables: `try (var stream = Files.lines(path))`
-- **Where you CANNOT use `var`**:
-    - Fields (instance or static)
-    - Method parameters
-    - Method return types
-    - Constructor parameters
-    - Catch parameters
-    - Variables without an initializer: `var x;` — compile error
-    - Array initializers: `var arr = {1, 2, 3};` — compile error
-    - `null` initializers: `var x = null;` — compile error
-- **When `var` improves readability**:
-    - Complex generic types: `var map = new HashMap<String, List<Optional<String>>>()`
-      instead of repeating the full type on both sides.
-    - Anonymous classes where the type is obvious from context.
-    - Iterator/loop patterns where the type is clear from the collection.
-- **When `var` hurts readability**:
-    - Numeric literals: `var count = 1` — is it `int`, `long`, `byte`?
-    - Method calls with non-obvious return types: `var result = process()`
-      — the reader must look up the method signature.
-    - Diamond operator with `var` loses type info:
-      `var list = new ArrayList<>()` infers `ArrayList<Object>`, not
-      `ArrayList<String>`. Always specify the type argument with `var`.
-- **`final var`** — combines type inference with immutability:
-  `final var name = "Alice"` is equivalent to `final String name = "Alice"`.
+- `var` (Java 10) pozwala kompilatorowi wnioskować typ zmiennej lokalnej
+  z wyrażenia inicjalizującego po prawej stronie.
+  Jest to **lukier składniowy** — zmienna jest nadal statycznie typowana
+  w czasie kompilacji, dokładnie tak, jakbyś napisał typ jawnie.
+- `var` **nie jest słowem kluczowym** — to „zarezerwowana nazwa typu". Można
+  nadal używać `var` jako nazwy zmiennej, metody lub pakietu
+  (ale nie jako nazwy klasy ani interfejsu). Zrobiono tak dla zachowania
+  kompatybilności wstecznej z istniejącym kodem używającym `var` jako identyfikatora.
+- **Gdzie MOŻNA używać `var`**:
+    - Zmienne lokalne z inicjalizatorem: `var list = new ArrayList<String>()`
+    - Zmienne w pętli for-each: `for (var item : collection)`
+    - Indeks w tradycyjnej pętli for: `for (var i = 0; i < 10; i++)`
+    - Zmienne w try-with-resources: `try (var stream = Files.lines(path))`
+- **Gdzie NIE MOŻNA używać `var`**:
+    - Pola (instancji ani statyczne)
+    - Parametry metod
+    - Typy zwracane metod
+    - Parametry konstruktorów
+    - Parametry catch
+    - Zmienne bez inicjalizatora: `var x;` — błąd kompilacji
+    - Inicjalizatory tablic: `var arr = {1, 2, 3};` — błąd kompilacji
+    - Inicjalizatory `null`: `var x = null;` — błąd kompilacji
+- **Kiedy `var` poprawia czytelność**:
+    - Złożone typy generyczne: `var map = new HashMap<String, List<Optional<String>>>()`
+      zamiast powtarzania pełnego typu po obu stronach.
+    - Klasy anonimowe, gdzie typ jest oczywisty z kontekstu.
+    - Wzorce iteratorów/pętli, gdzie typ jest jasny z kolekcji.
+- **Kiedy `var` pogarsza czytelność**:
+    - Literały numeryczne: `var count = 1` — czy to `int`, `long`, `byte`?
+    - Wywołania metod z nieoczywistym typem zwracanym: `var result = process()`
+      — czytający musi sprawdzić sygnaturę metody.
+    - Operator diamond z `var` traci informację o typie:
+      `var list = new ArrayList<>()` wnioskuje `ArrayList<Object>`, a nie
+      `ArrayList<String>`. Zawsze podawaj argument typu z `var`.
+- **`final var`** — łączy wnioskowanie typów z niemutowalnością:
+  `final var name = "Alice"` jest równoważne z `final String name = "Alice"`.
 */
 
 // ============================================================
-// Section 2: var in Lambda Parameters (Java 11)
+// Sekcja 2: var w parametrach lambda (Java 11)
 // ============================================================
 
 /*
-## var in Lambda Parameters (Java 11)
+## var w parametrach lambda (Java 11)
 
-- Java 11 (JEP 323) allows `var` in lambda formal parameters:
+- Java 11 (JEP 323) pozwala na `var` w formalnych parametrach lambda:
   `(var x, var y) -> x + y`.
-- **Why was this added?** Not for brevity (implicit parameters are
-  already shorter), but to allow **annotations** on lambda parameters.
-  Before Java 11, you could only annotate lambda parameters if you
-  used explicit types: `(@NotNull String x) -> ...`. Now you can
-  write `(@NotNull var x) -> ...` and let the compiler infer the type.
-- **Rules**:
-    - Must use `var` for **all** parameters or **none** — mixing
-      `var` with explicit types is not allowed:
-      `(var x, String y) -> ...` — compile error.
-    - Cannot mix `var` with implicit (no-type) parameters:
-      `(var x, y) -> ...` — compile error.
-    - Cannot use `var` for parameters with no parentheses:
-      `var x -> ...` — compile error (parentheses required).
-- **Three lambda parameter styles** (comparison):
-    - Implicit:  `(x, y) -> x + y` — shortest, no annotations possible
-    - Explicit:  `(String x, String y) -> x + y` — verbose, annotations OK
-    - var:       `(var x, var y) -> x + y` — same as implicit but allows annotations
-- **Practical use**: applying annotations like `@Nullable`, `@NonNull`,
-  `@SuppressWarnings`, or custom annotations to individual lambda
-  parameters without specifying the full type.
+- **Dlaczego to dodano?** Nie dla zwięzłości (parametry niejawne są
+  już krótsze), ale aby umożliwić **adnotacje** na parametrach lambda.
+  Przed Java 11 można było adnotować parametry lambda tylko przy użyciu
+  jawnych typów: `(@NotNull String x) -> ...`. Teraz można
+  napisać `(@NotNull var x) -> ...` i pozwolić kompilatorowi wnioskować typ.
+- **Zasady**:
+    - Trzeba użyć `var` dla **wszystkich** parametrów lub **żadnego** — mieszanie
+      `var` z jawnymi typami jest niedozwolone:
+      `(var x, String y) -> ...` — błąd kompilacji.
+    - Nie można mieszać `var` z niejawnymi (bez typu) parametrami:
+      `(var x, y) -> ...` — błąd kompilacji.
+    - Nie można używać `var` dla parametrów bez nawiasów:
+      `var x -> ...` — błąd kompilacji (nawiasy wymagane).
+- **Trzy style parametrów lambda** (porównanie):
+    - Niejawne:  `(x, y) -> x + y` — najkrótsze, adnotacje niemożliwe
+    - Jawne:     `(String x, String y) -> x + y` — rozwlekłe, adnotacje OK
+    - var:       `(var x, var y) -> x + y` — jak niejawne, ale pozwala na adnotacje
+- **Praktyczne zastosowanie**: nakładanie adnotacji takich jak `@Nullable`, `@NonNull`,
+  `@SuppressWarnings` lub niestandardowych adnotacji na poszczególne parametry
+  lambda bez podawania pełnego typu.
 */
 
 // ============================================================
-// Section 3: New String Methods (Java 11)
+// Sekcja 3: Nowe metody String (Java 11)
 // ============================================================
 
 /*
-## New String Methods (Java 11)
+## Nowe metody String (Java 11)
 
-- **`isBlank()`** — returns `true` if the string is empty or contains
-  only whitespace characters. Unlike `isEmpty()` which only checks
-  `length() == 0`, `isBlank()` is **Unicode-aware** and recognizes
-  all Unicode whitespace (e.g., non-breaking space `\u00A0`,
-  ideographic space `\u3000`, etc.).
-- **`strip()`** — removes leading and trailing whitespace. Similar
-  to `trim()`, but **Unicode-aware**:
-    - `trim()` removes characters with code points ≤ U+0020 (ASCII
-      control characters and space).
-    - `strip()` uses `Character.isWhitespace()`, which includes
-      Unicode whitespace like `\u2003` (em space), `\u3000`
-      (ideographic space), etc.
-    - In most practical cases they behave the same, but `strip()` is
-      the correct choice for internationalized text.
-- **`stripLeading()`** — removes whitespace from the beginning only.
-- **`stripTrailing()`** — removes whitespace from the end only.
-- **`lines()`** — returns a `Stream<String>` of lines, split by
-  line terminators: `\n` (LF), `\r` (CR), or `\r\n` (CRLF).
-  The stream is **lazy** — efficient for processing large multi-line
-  strings without loading all lines into memory at once.
-  Empty trailing lines are not included if the string ends with a
-  line terminator.
-- **`repeat(int count)`** — returns a string that is this string
-  repeated `count` times. `"ab".repeat(3)` → `"ababab"`.
-  Returns an empty string when `count` is 0. Throws
-  `IllegalArgumentException` if `count` is negative.
+- **`isBlank()`** — zwraca `true`, jeśli ciąg jest pusty lub zawiera
+  tylko białe znaki. W przeciwieństwie do `isEmpty()`, które sprawdza
+  tylko `length() == 0`, `isBlank()` jest **świadome Unicode** i rozpoznaje
+  wszystkie białe znaki Unicode (np. spacja niełamliwa `\u00A0`,
+  spacja ideograficzna `\u3000` itp.).
+- **`strip()`** — usuwa wiodące i końcowe białe znaki. Podobne
+  do `trim()`, ale **świadome Unicode**:
+    - `trim()` usuwa znaki o punktach kodowych ≤ U+0020 (znaki
+      kontrolne ASCII i spacja).
+    - `strip()` używa `Character.isWhitespace()`, które obejmuje
+      białe znaki Unicode, takie jak `\u2003` (spacja firetowa), `\u3000`
+      (spacja ideograficzna) itp.
+    - W większości praktycznych przypadków zachowują się tak samo, ale `strip()` jest
+      właściwym wyborem dla tekstu międzynarodowego.
+- **`stripLeading()`** — usuwa białe znaki tylko z początku.
+- **`stripTrailing()`** — usuwa białe znaki tylko z końca.
+- **`lines()`** — zwraca `Stream<String>` linii, rozdzielonych
+  terminatorami linii: `\n` (LF), `\r` (CR) lub `\r\n` (CRLF).
+  Stream jest **leniwy** — wydajny do przetwarzania dużych wieloliniowych
+  ciągów bez ładowania wszystkich linii do pamięci naraz.
+  Puste końcowe linie nie są uwzględniane, jeśli ciąg kończy się
+  terminatorem linii.
+- **`repeat(int count)`** — zwraca ciąg będący powtórzeniem tego ciągu
+  `count` razy. `"ab".repeat(3)` → `"ababab"`.
+  Zwraca pusty ciąg, gdy `count` wynosi 0. Rzuca
+  `IllegalArgumentException`, jeśli `count` jest ujemne.
 */
 
 // ============================================================
-// Section 4: Files.readString() and Files.writeString() (Java 11)
+// Sekcja 4: Files.readString() i Files.writeString() (Java 11)
 // ============================================================
 
 /*
-## Files.readString() and Files.writeString() (Java 11)
+## Files.readString() i Files.writeString() (Java 11)
 
-- Before Java 11, reading an entire file into a `String` required
-  multi-step boilerplate:
+- Przed Java 11 wczytanie całego pliku do `String` wymagało
+  wieloetapowego kodu szablonowego:
     - `new String(Files.readAllBytes(path), StandardCharsets.UTF_8)`
-    - or wrapping a `BufferedReader` in try-with-resources.
-- Java 11 added convenience methods on `java.nio.file.Files`:
-    - **`Files.readString(Path)`** — reads the entire file as a
-      `String` using UTF-8 encoding (default).
-    - **`Files.readString(Path, Charset)`** — reads with the
-      specified charset.
+    - lub opakowanie `BufferedReader` w try-with-resources.
+- Java 11 dodała metody pomocnicze w `java.nio.file.Files`:
+    - **`Files.readString(Path)`** — wczytuje cały plik jako
+      `String` w kodowaniu UTF-8 (domyślnie).
+    - **`Files.readString(Path, Charset)`** — wczytuje z podanym
+      zestawem znaków.
     - **`Files.writeString(Path, CharSequence, OpenOption...)`** —
-      writes a string to a file. Default options are `CREATE` and
-      `TRUNCATE_EXISTING` (creates the file if it doesn't exist,
-      overwrites if it does).
+      zapisuje ciąg do pliku. Domyślne opcje to `CREATE` i
+      `TRUNCATE_EXISTING` (tworzy plik, jeśli nie istnieje,
+      nadpisuje, jeśli istnieje).
     - **`Files.writeString(Path, CharSequence, Charset, OpenOption...)`**
-      — writes with specified charset.
-- **Common `OpenOption` values** (from `StandardOpenOption`):
-    - `CREATE` — create the file if it doesn't exist (default).
-    - `TRUNCATE_EXISTING` — truncate the file to zero length (default).
-    - `APPEND` — append to the end of the file.
-    - `CREATE_NEW` — create a new file, fail if it already exists.
-    - `WRITE` — open for writing (implied by `writeString`).
-- **Caution**: these methods read/write the **entire** file into
-  memory. For large files, use streaming APIs like `Files.lines()`,
-  `BufferedReader`, or `BufferedWriter`.
+      — zapisuje z podanym zestawem znaków.
+- **Typowe wartości `OpenOption`** (z `StandardOpenOption`):
+    - `CREATE` — utwórz plik, jeśli nie istnieje (domyślnie).
+    - `TRUNCATE_EXISTING` — obetnij plik do zerowej długości (domyślnie).
+    - `APPEND` — dopisz na końcu pliku.
+    - `CREATE_NEW` — utwórz nowy plik, niepowodzenie jeśli już istnieje.
+    - `WRITE` — otwórz do zapisu (implikowane przez `writeString`).
+- **Uwaga**: te metody wczytują/zapisują **cały** plik do
+  pamięci. Dla dużych plików używaj API strumieniowych jak `Files.lines()`,
+  `BufferedReader` lub `BufferedWriter`.
 */
 
 // ============================================================
-// Section 5: Other Notable Java 11 Additions
+// Sekcja 5: Inne istotne dodatki Java 11
 // ============================================================
 
 /*
-## Other Notable Java 11 Additions
+## Inne istotne dodatki Java 11
 
-- **`Optional.isEmpty()`** (Java 11) — the counterpart to
-  `isPresent()`. Returns `true` if no value is present.
-  Before Java 11, you had to write `!optional.isPresent()`.
-- **`Collection.toArray(IntFunction)`** (Java 11) — type-safe
-  array conversion: `list.toArray(String[]::new)` replaces the
-  older `list.toArray(new String[0])` pattern. The `IntFunction`
-  receives the collection size and returns an array of that size.
-- **`Predicate.not()`** (Java 11) — static method for negating
-  predicates: `lines.filter(Predicate.not(String::isBlank))`
-  instead of `lines.filter(s -> !s.isBlank())`. Works with
-  method references, unlike the lambda negation pattern.
-- **`Pattern.asMatchPredicate()`** (Java 11) — returns a
-  `Predicate<String>` that tests if the **entire** input matches
-  the pattern (like `matches()`). Compare with Java 8's
-  `asPredicate()` which uses `find()` (partial match).
-- **`Character.toString(int)`** (Java 11) — converts a Unicode
-  code point to a `String`. Replaces the two-step
-  `new String(Character.toChars(codePoint))` pattern.
-- **Single-file source-code programs** (Java 11, JEP 330) — you
-  can run `java MyProgram.java` directly without a separate
-  `javac` compilation step. The JVM compiles and runs in one
-  command. Useful for scripts, prototyping, and learning.
+- **`Optional.isEmpty()`** (Java 11) — odpowiednik
+  `isPresent()`. Zwraca `true`, jeśli wartość nie jest obecna.
+  Przed Java 11 trzeba było pisać `!optional.isPresent()`.
+- **`Collection.toArray(IntFunction)`** (Java 11) — bezpieczna typowo
+  konwersja na tablicę: `list.toArray(String[]::new)` zastępuje
+  starszy wzorzec `list.toArray(new String[0])`. `IntFunction`
+  otrzymuje rozmiar kolekcji i zwraca tablicę tego rozmiaru.
+- **`Predicate.not()`** (Java 11) — metoda statyczna do negowania
+  predykatów: `lines.filter(Predicate.not(String::isBlank))`
+  zamiast `lines.filter(s -> !s.isBlank())`. Działa z referencjami
+  do metod, w przeciwieństwie do wzorca negacji lambda.
+- **`Pattern.asMatchPredicate()`** (Java 11) — zwraca
+  `Predicate<String>`, który testuje, czy **całe** wejście pasuje
+  do wzorca (jak `matches()`). Porównaj z `asPredicate()` z Java 8,
+  które używa `find()` (częściowe dopasowanie).
+- **`Character.toString(int)`** (Java 11) — konwertuje punkt kodowy
+  Unicode na `String`. Zastępuje dwuetapowy wzorzec
+  `new String(Character.toChars(codePoint))`.
+- **Jednoplikowe programy źródłowe** (Java 11, JEP 330) — można
+  uruchomić `java MyProgram.java` bezpośrednio bez osobnego kroku
+  kompilacji `javac`. JVM kompiluje i uruchamia jednym poleceniem.
+  Przydatne do skryptów, prototypowania i nauki.
 */
 
 public class OtherChanges {
 
-    // ---- Helper annotation for Section 2 (var in lambdas) ----
+    // ---- Adnotacja pomocnicza dla Sekcji 2 (var w lambdach) ----
 
     @Target(ElementType.PARAMETER)
     @Retention(RetentionPolicy.RUNTIME)
@@ -196,60 +196,60 @@ public class OtherChanges {
     @interface Positive {}
 
     // ============================================================
-    // Section 1: Local Variable Type Inference (var)
+    // Sekcja 1: Wnioskowanie typów zmiennych lokalnych (var)
     // ============================================================
 
     static void localVariableTypeInference() {
         System.out.println("=== Local Variable Type Inference (var) ===");
 
-        // Basic type inference — compiler infers String from the initializer
+        // Podstawowe wnioskowanie typów — kompilator wnioskuje String z inicjalizatora
         var greeting = "Hello, Java 10!";
         System.out.println("var greeting (String): " + greeting);
         System.out.println("  actual type: " + greeting.getClass().getSimpleName());
 
-        // Inference with numeric types — var infers int (not long, not short)
+        // Wnioskowanie z typami numerycznymi — var wnioskuje int (nie long, nie short)
         var count = 42;
-        var price = 19.99;   // infers double
-        var initial = 'A';   // infers char
-        var flag = true;     // infers boolean
+        var price = 19.99;   // wnioskuje double
+        var initial = 'A';   // wnioskuje char
+        var flag = true;     // wnioskuje boolean
         System.out.println("var count (int): " + count);
         System.out.println("var price (double): " + price);
         System.out.println("var initial (char): " + initial);
         System.out.println("var flag (boolean): " + flag);
 
-        // Inference with collections — the full generic type is inferred
+        // Wnioskowanie z kolekcjami — pełny typ generyczny jest wnioskowany
         var names = new ArrayList<String>();
         names.add("Alice");
         names.add("Bob");
         names.add("Charlie");
         System.out.println("var names (ArrayList<String>): " + names);
 
-        // Complex generic types — var shines here
-        // Without var: Map<String, List<Optional<String>>> map = new HashMap<String, List<Optional<String>>>();
+        // Złożone typy generyczne — var sprawdza się tutaj
+        // Bez var: Map<String, List<Optional<String>>> map = new HashMap<String, List<Optional<String>>>();
         var complexMap = new HashMap<String, List<Optional<String>>>();
         complexMap.put("greetings", List.of(Optional.of("hello"), Optional.empty()));
         System.out.println("complex generic map: " + complexMap);
 
-        // var with Map.of — infers Map<String, Integer>
+        // var z Map.of — wnioskuje Map<String, Integer>
         var scores = Map.of("Alice", 95, "Bob", 87, "Charlie", 92);
         System.out.println("var scores (Map<String, Integer>): " + scores);
 
-        // var in enhanced for-loop — infers the element type from the collection
+        // var w pętli for-each — wnioskuje typ elementu z kolekcji
         System.out.print("for-each with var: ");
         for (var name : names) {
             System.out.print(name + " ");
         }
         System.out.println();
 
-        // var in traditional for-loop
+        // var w tradycyjnej pętli for
         System.out.print("for-loop with var: ");
         for (var i = 0; i < names.size(); i++) {
             System.out.print(names.get(i) + " ");
         }
         System.out.println();
 
-        // var in try-with-resources
-        // (We'll demo with a StringReader since it implements AutoCloseable)
+        // var w try-with-resources
+        // (Demonstracja ze StringReader, ponieważ implementuje AutoCloseable)
         var content = "line1\nline2\nline3";
         try (var reader = new java.io.StringReader(content);
              var buffered = new java.io.BufferedReader(reader)) {
@@ -259,91 +259,91 @@ public class OtherChanges {
             System.out.println("  error: " + e.getMessage());
         }
 
-        // final var — combining immutability with type inference
+        // final var — łączenie niemutowalności z wnioskowaniem typów
         final var PI = 3.14159;
         final var APP_NAME = "JModern";
         System.out.println("final var PI: " + PI);
         System.out.println("final var APP_NAME: " + APP_NAME);
-        // PI = 3.0;  // compile error — final variable
+        // PI = 3.0;  // błąd kompilacji — zmienna final
 
-        // var is still statically typed — you CANNOT change the type after declaration
+        // var jest nadal statycznie typowane — NIE MOŻNA zmienić typu po deklaracji
         var text = "hello";
-        text = "world";     // OK — same type (String)
-        // text = 42;       // compile error — incompatible types: int cannot be converted to String
+        text = "world";     // OK — ten sam typ (String)
+        // text = 42;       // błąd kompilacji — niekompatybilne typy: int nie może być przekonwertowany na String
         System.out.println("var is static: reassigned to \"" + text + "\" (still String)");
 
-        // ---- PITFALLS: where var loses type information ----
+        // ---- PUŁAPKI: gdzie var traci informację o typie ----
 
-        // PITFALL 1: Diamond operator with var — infers Object, not the expected type
-        var rawList = new ArrayList<>();     // ArrayList<Object>, NOT ArrayList<String>!
+        // PUŁAPKA 1: Operator diamond z var — wnioskuje Object, nie oczekiwany typ
+        var rawList = new ArrayList<>();     // ArrayList<Object>, NIE ArrayList<String>!
         rawList.add("string");
-        rawList.add(42);                     // compiles — because it's ArrayList<Object>
+        rawList.add(42);                     // kompiluje się — bo to ArrayList<Object>
         System.out.println("PITFALL — var + diamond: " + rawList + " (ArrayList<Object>)");
-        // Fix: always specify the type argument: var list = new ArrayList<String>()
+        // Poprawka: zawsze podawaj argument typu: var list = new ArrayList<String>()
 
-        // PITFALL 2: Method return types may not be obvious
-        var result = processData();          // What type is this? Reader must check the method.
+        // PUŁAPKA 2: Typy zwracane metod mogą nie być oczywiste
+        var result = processData();          // Jaki to typ? Czytający musi sprawdzić metodę.
         System.out.println("PITFALL — non-obvious return: " + result);
 
-        // BEST PRACTICE: use var when the type is clear from context
+        // DOBRA PRAKTYKA: używaj var, gdy typ jest jasny z kontekstu
         var formatter = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd");
         var now = java.time.LocalDate.now();
         System.out.println("clear context: " + now.format(formatter));
     }
 
-    // Helper method for demonstrating non-obvious return types
+    // Metoda pomocnicza do demonstracji nieoczywistych typów zwracanych
     private static Map<String, List<Integer>> processData() {
         return Map.of("values", List.of(1, 2, 3));
     }
 
     // ============================================================
-    // Section 2: var in Lambda Parameters (Java 11)
+    // Sekcja 2: var w parametrach lambda (Java 11)
     // ============================================================
 
     static void varInLambdaParameters() {
         System.out.println("\n=== var in Lambda Parameters (Java 11) ===");
 
-        // Three styles of lambda parameters — comparison
-        // Style 1: Implicit types (no types, shortest)
+        // Trzy style parametrów lambda — porównanie
+        // Styl 1: Typy niejawne (bez typów, najkrótszy)
         BinaryOperator<String> implicitConcat = (x, y) -> x + " " + y;
         System.out.println("implicit: " + implicitConcat.apply("Hello", "World"));
 
-        // Style 2: Explicit types (full type names)
+        // Styl 2: Typy jawne (pełne nazwy typów)
         BinaryOperator<String> explicitConcat = (String x, String y) -> x + " " + y;
         System.out.println("explicit: " + explicitConcat.apply("Hello", "World"));
 
-        // Style 3: var types (Java 11 — allows annotations)
+        // Styl 3: Typy var (Java 11 — pozwala na adnotacje)
         BinaryOperator<String> varConcat = (var x, var y) -> x + " " + y;
         System.out.println("var:      " + varConcat.apply("Hello", "World"));
 
-        // The main reason for var in lambdas: ANNOTATIONS on parameters
-        // With var, you can annotate lambda parameters without writing the full type
+        // Główny powód var w lambdach: ADNOTACJE na parametrach
+        // Z var możesz adnotować parametry lambda bez pisania pełnego typu
         Function<String, String> annotatedLambda = (@NotNull var s) -> s.toUpperCase();
         System.out.println("annotated lambda: " + annotatedLambda.apply("hello"));
 
-        // Multiple annotated parameters
+        // Wiele adnotowanych parametrów
         BinaryOperator<Integer> annotatedAdd = (@Positive var a, @Positive var b) -> a + b;
         System.out.println("annotated add: " + annotatedAdd.apply(3, 5));
 
-        // var in lambda with stream operations
+        // var w lambda z operacjami Stream
         var words = List.of("hello", "world", "java", "eleven");
         var upperWords = words.stream()
                 .map((var word) -> word.toUpperCase())
                 .collect(Collectors.toList());
         System.out.println("stream with var lambda: " + upperWords);
 
-        // var with BiFunction
+        // var z BiFunction
         BiFunction<String, Integer, String> repeater = (var text, var times) -> text.repeat(times);
         System.out.println("BiFunction with var: " + repeater.apply("Ha", 3));
 
-        // Practical: filtering with annotated var
+        // Praktyka: filtrowanie z adnotowanym var
         var numbers = List.of(1, -2, 3, -4, 5, 0);
         var positives = numbers.stream()
                 .filter((@Positive var n) -> n > 0)
                 .collect(Collectors.toList());
         System.out.println("filtered positives: " + positives);
 
-        // RULES — what you CANNOT do:
+        // ZASADY — czego NIE MOŻNA robić:
         System.out.println("\nvar lambda rules:");
         System.out.println("  OK:    (var x, var y) -> x + y");
         System.out.println("  OK:    (@NotNull var x) -> x.length()");
@@ -353,7 +353,7 @@ public class OtherChanges {
     }
 
     // ============================================================
-    // Section 3: New String Methods (Java 11)
+    // Sekcja 3: Nowe metody String (Java 11)
     // ============================================================
 
     static void newStringMethods() {
@@ -367,7 +367,7 @@ public class OtherChanges {
         var tabs = "\t\t";
         var newlines = "\n\n";
         var text = "hello";
-        var unicodeSpaces = "\u2003\u2003";  // em spaces (Unicode whitespace)
+        var unicodeSpaces = "\u2003\u2003";  // spacje firetowe (białe znaki Unicode)
 
         System.out.println("\"\"        — isEmpty: " + empty.isEmpty() + ", isBlank: " + empty.isBlank());
         System.out.println("\"   \"     — isEmpty: " + spaces.isEmpty() + ", isBlank: " + spaces.isBlank());
@@ -379,23 +379,23 @@ public class OtherChanges {
         // ---- strip() vs trim() ----
         System.out.println("\n--- strip() vs trim() ---");
 
-        // For ASCII whitespace, they behave the same
+        // Dla białych znaków ASCII zachowują się tak samo
         var padded = "  hello  ";
         System.out.println("ASCII — trim():  [" + padded.trim() + "]");
         System.out.println("ASCII — strip(): [" + padded.strip() + "]");
 
-        // For Unicode whitespace, strip() removes it but trim() does not
-        var unicodePadded = "\u2003hello\u2003";  // em space (U+2003)
+        // Dla białych znaków Unicode, strip() je usuwa, ale trim() nie
+        var unicodePadded = "\u2003hello\u2003";  // spacja firetowa (U+2003)
         System.out.println("Unicode — trim():  [" + unicodePadded.trim() + "]");
         System.out.println("Unicode — strip(): [" + unicodePadded.strip() + "]");
         System.out.println("  (\\u2003 is em space — strip() removes it, trim() does not)");
 
-        // Another Unicode example: ideographic space (U+3000, used in CJK text)
+        // Kolejny przykład Unicode: spacja ideograficzna (U+3000, używana w tekście CJK)
         var cjkPadded = "\u3000hello\u3000";
         System.out.println("CJK space — trim():  [" + cjkPadded.trim() + "]");
         System.out.println("CJK space — strip(): [" + cjkPadded.strip() + "]");
 
-        // ---- stripLeading() and stripTrailing() ----
+        // ---- stripLeading() i stripTrailing() ----
         System.out.println("\n--- stripLeading() / stripTrailing() ---");
 
         var mixed = "   hello   ";
@@ -411,25 +411,25 @@ public class OtherChanges {
         System.out.println("lines from multi-line string:");
         multiLine.lines().forEach(line -> System.out.println("  [" + line + "]"));
 
-        // lines() is lazy — works efficiently with large strings
+        // lines() jest leniwe — działa wydajnie z dużymi ciągami
         var lineCount = multiLine.lines().count();
         System.out.println("line count: " + lineCount);
 
-        // Practical: filtering non-blank lines
+        // Praktyka: filtrowanie niepustych linii
         var withBlanks = "hello\n   \nworld\n\n  \njava";
         var nonBlankLines = withBlanks.lines()
                 .filter(line -> !line.isBlank())
                 .collect(Collectors.toList());
         System.out.println("non-blank lines: " + nonBlankLines);
 
-        // Practical: using Predicate.not() with lines
+        // Praktyka: użycie Predicate.not() z lines
         var trimmedLines = withBlanks.lines()
                 .filter(Predicate.not(String::isBlank))
                 .map(String::strip)
                 .collect(Collectors.toList());
         System.out.println("trimmed non-blank: " + trimmedLines);
 
-        // lines() handles different line terminators: \n, \r, \r\n
+        // lines() obsługuje różne terminatory linii: \n, \r, \r\n
         var mixedEndings = "unix\nwindows\r\nold-mac\rend";
         System.out.println("mixed line endings: " + mixedEndings.lines().collect(Collectors.toList()));
 
@@ -441,72 +441,72 @@ public class OtherChanges {
         System.out.println("\"x\".repeat(0):   [" + "x".repeat(0) + "]  (empty string)");
         System.out.println("\"x\".repeat(1):   " + "x".repeat(1));
 
-        // Practical: creating separators
+        // Praktyka: tworzenie separatorów
         var separator = "-".repeat(40);
         System.out.println(separator);
         System.out.println("  formatted output between separators");
         System.out.println(separator);
 
-        // Practical: indentation
-        var indent = "  ".repeat(3);  // 6 spaces
+        // Praktyka: wcięcia
+        var indent = "  ".repeat(3);  // 6 spacji
         System.out.println(indent + "indented text (3 levels)");
 
-        // Practical: simple text patterns
+        // Praktyka: proste wzorce tekstowe
         for (var i = 1; i <= 5; i++) {
             System.out.println("*".repeat(i));
         }
     }
 
     // ============================================================
-    // Section 4: Files.readString() and Files.writeString() (Java 11)
+    // Sekcja 4: Files.readString() i Files.writeString() (Java 11)
     // ============================================================
 
     static void filesReadWriteString() {
         System.out.println("\n=== Files.readString() and Files.writeString() ===");
 
         try {
-            // Create a temporary file for safe demonstration
+            // Tworzenie pliku tymczasowego dla bezpiecznej demonstracji
             var tempFile = Files.createTempFile("jmodern-demo-", ".txt");
             System.out.println("temp file: " + tempFile);
 
-            // ---- Writing a string to a file ----
+            // ---- Zapis ciągu do pliku ----
             var content = "Hello from Java 11!\nThis is line 2.\nAnd line 3.";
             Files.writeString(tempFile, content);
             System.out.println("wrote " + content.length() + " chars to file");
 
-            // ---- Reading the file back ----
+            // ---- Odczyt pliku z powrotem ----
             var readBack = Files.readString(tempFile);
             System.out.println("read back:\n" + readBack);
 
-            // Verify round-trip
+            // Weryfikacja cyklu zapis-odczyt
             System.out.println("round-trip OK: " + content.equals(readBack));
 
-            // ---- Appending to a file ----
+            // ---- Dopisywanie do pliku ----
             var appendContent = "\nAppended line 4.";
             Files.writeString(tempFile, appendContent, StandardOpenOption.APPEND);
             System.out.println("\nafter APPEND:");
             System.out.println(Files.readString(tempFile));
 
-            // ---- Writing with CREATE_NEW (fails if file exists) ----
+            // ---- Zapis z CREATE_NEW (niepowodzenie jeśli plik istnieje) ----
             var newFile = tempFile.getParent().resolve("jmodern-new-" + System.nanoTime() + ".txt");
             Files.writeString(newFile, "Brand new file!", StandardOpenOption.CREATE_NEW);
             System.out.println("\nCREATE_NEW file: " + Files.readString(newFile));
 
-            // ---- Comparison: the old way (before Java 11) ----
-            // Old way to read:
+            // ---- Porównanie: stary sposób (przed Java 11) ----
+            // Stary sposób odczytu:
             //   byte[] bytes = Files.readAllBytes(path);
             //   String content = new String(bytes, StandardCharsets.UTF_8);
             //
-            // Old way to write:
+            // Stary sposób zapisu:
             //   Files.write(path, content.getBytes(StandardCharsets.UTF_8));
             //
-            // New way (Java 11):
+            // Nowy sposób (Java 11):
             //   String content = Files.readString(path);
             //   Files.writeString(path, content);
             System.out.println("\n(old way: Files.readAllBytes + new String(bytes, charset))");
             System.out.println("(new way: Files.readString(path) — one line!)");
 
-            // ---- Using with lines() for processing ----
+            // ---- Użycie z lines() do przetwarzania ----
             var fileContent = Files.readString(tempFile);
             var lineList = fileContent.lines()
                     .filter(Predicate.not(String::isBlank))
@@ -514,7 +514,7 @@ public class OtherChanges {
                     .collect(Collectors.toList());
             System.out.println("\nprocessed lines from file: " + lineList);
 
-            // Cleanup temp files
+            // Czyszczenie plików tymczasowych
             Files.deleteIfExists(tempFile);
             Files.deleteIfExists(newFile);
             System.out.println("temp files cleaned up");
@@ -525,7 +525,7 @@ public class OtherChanges {
     }
 
     // ============================================================
-    // Section 5: Other Notable Java 11 Additions
+    // Sekcja 5: Inne istotne dodatki Java 11
     // ============================================================
 
     static void otherJava11Additions() {
@@ -541,7 +541,7 @@ public class OtherChanges {
         System.out.println("absent.isEmpty():  " + absent.isEmpty());
         System.out.println("(before Java 11: !absent.isPresent() = " + !absent.isPresent() + ")");
 
-        // Practical: cleaner null-checking patterns
+        // Praktyka: czytelniejsze wzorce sprawdzania null
         var maybeValue = Optional.ofNullable(System.getProperty("non.existent.property"));
         if (maybeValue.isEmpty()) {
             System.out.println("property not found (checked with isEmpty)");
@@ -552,15 +552,15 @@ public class OtherChanges {
 
         var names = List.of("Alice", "Bob", "Charlie");
 
-        // Old way (Java 8):
+        // Stary sposób (Java 8):
         String[] oldWay = names.toArray(new String[0]);
         System.out.println("old way: " + Arrays.toString(oldWay));
 
-        // New way (Java 11) — using method reference:
+        // Nowy sposób (Java 11) — z użyciem referencji do metody:
         String[] newWay = names.toArray(String[]::new);
         System.out.println("new way: " + Arrays.toString(newWay));
 
-        // Works with any collection type
+        // Działa z każdym typem kolekcji
         var numbers = Set.of(1, 2, 3, 4, 5);
         Integer[] numArray = numbers.toArray(Integer[]::new);
         System.out.println("set to array: " + Arrays.toString(numArray));
@@ -570,19 +570,19 @@ public class OtherChanges {
 
         var lines = List.of("hello", "", "  ", "world", "\t", "java");
 
-        // Without Predicate.not() — need a lambda
+        // Bez Predicate.not() — potrzebna lambda
         var withoutNot = lines.stream()
                 .filter(s -> !s.isBlank())
                 .collect(Collectors.toList());
         System.out.println("lambda negation:     " + withoutNot);
 
-        // With Predicate.not() — works with method references
+        // Z Predicate.not() — działa z referencjami do metod
         var withNot = lines.stream()
                 .filter(Predicate.not(String::isBlank))
                 .collect(Collectors.toList());
         System.out.println("Predicate.not():     " + withNot);
 
-        // Predicate.not() with other method references
+        // Predicate.not() z innymi referencjami do metod
         var mixedNumbers = List.of(1, -2, 3, -4, 5, 0);
         Predicate<Integer> isNegative = n -> n < 0;
         var nonNegative = mixedNumbers.stream()
@@ -590,7 +590,7 @@ public class OtherChanges {
                 .collect(Collectors.toList());
         System.out.println("non-negative numbers: " + nonNegative);
 
-        // Composing with Predicate.not()
+        // Komponowanie z Predicate.not()
         var words = List.of("hello", "Hi", "WORLD", "java", "OK");
         var result = words.stream()
                 .filter(Predicate.not(String::isEmpty))
@@ -603,9 +603,9 @@ public class OtherChanges {
 
         var emailPattern = Pattern.compile("^[\\w.-]+@[\\w.-]+\\.[a-zA-Z]{2,}$");
 
-        // asPredicate() (Java 8) — uses find() (partial match)
+        // asPredicate() (Java 8) — używa find() (częściowe dopasowanie)
         Predicate<String> partialMatch = emailPattern.asPredicate();
-        // asMatchPredicate() (Java 11) — uses matches() (full match)
+        // asMatchPredicate() (Java 11) — używa matches() (pełne dopasowanie)
         Predicate<String> fullMatch = emailPattern.asMatchPredicate();
 
         var testInputs = List.of("alice@example.com", "not-an-email", "prefix alice@example.com suffix");
@@ -615,7 +615,7 @@ public class OtherChanges {
                     "\"" + input + "\"", partialMatch.test(input), fullMatch.test(input));
         }
 
-        // Practical: filtering valid emails from a list
+        // Praktyka: filtrowanie prawidłowych adresów email z listy
         var candidates = List.of("alice@example.com", "bob@", "charlie@corp.io", "not-email");
         var validEmails = candidates.stream()
                 .filter(emailPattern.asMatchPredicate())
@@ -625,16 +625,16 @@ public class OtherChanges {
         // ---- Character.toString(int) ----
         System.out.println("\n--- Character.toString(int) ---");
 
-        // New in Java 11 — converts a code point to String directly
+        // Nowość w Java 11 — konwertuje punkt kodowy bezpośrednio na String
         System.out.println("Character.toString(65):    " + Character.toString(65));     // "A"
-        System.out.println("Character.toString(9731):  " + Character.toString(9731));   // snowman ☃
+        System.out.println("Character.toString(9731):  " + Character.toString(9731));   // bałwan ☃
         System.out.println("Character.toString(128512): " + Character.toString(128512)); // emoji
 
-        // Old way (before Java 11):
+        // Stary sposób (przed Java 11):
         System.out.println("old way: new String(Character.toChars(9731)): "
                 + new String(Character.toChars(9731)));
 
-        // ---- Single-file source-code programs (JEP 330) ----
+        // ---- Jednoplikowe programy źródłowe (JEP 330) ----
         System.out.println("\n--- Single-file source-code programs ---");
         System.out.println("Java 11 allows: java MyProgram.java  (no javac step)");
         System.out.println("  - Compiles and runs in a single command");
@@ -645,7 +645,7 @@ public class OtherChanges {
     }
 
     // ============================================================
-    // Main — run all sections
+    // Main — uruchomienie wszystkich sekcji
     // ============================================================
 
     public static void main(String[] args) {
