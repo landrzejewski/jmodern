@@ -26,7 +26,7 @@ public class Solutions {
                 Total: %d | Success: %d | Errors: %d | Timeouts: %d
                 """.formatted(responses.size(), successes, errors, timeouts);
 
-        return header + "\n" + String.join("\n", lines);
+        return header + String.join("\n", lines);
     }
 
     static double evaluate(Expr expr, Map<String, Double> variables) {

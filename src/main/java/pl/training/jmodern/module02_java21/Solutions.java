@@ -66,6 +66,6 @@ public class Solutions {
         var sorted = new TreeMap<>(results);
         System.out.println("First sensor: " + sorted.firstEntry());
         System.out.println("Last sensor: " + sorted.lastEntry());
-        return Collections.unmodifiableSequencedMap(new TreeMap<>(results));
+        return Collections.unmodifiableSequencedMap(sorted);
     }
 }

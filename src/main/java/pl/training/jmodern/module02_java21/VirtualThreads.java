@@ -14,20 +14,12 @@ import java.util.stream.*;
 /*
 ## Introduction -- Why Virtual Threads
 
-- The **thread-per-request** model is the simplest server design:
-  one incoming request = one thread that handles it from start to
-  finish. It is easy to reason about (stack traces, debuggers,
-  profilers all work naturally) and requires no callbacks or async
-  plumbing.
 - **Problem**: OS (platform) threads are expensive.
     - Each thread typically reserves ~1 MB of stack memory.
     - Thread creation involves a kernel call and scheduling overhead.
     - In practice, a JVM can sustain **~2,000--10,000 platform threads**
       before hitting OS limits, memory pressure, or scheduling
       degradation.
-    - This means a server using thread-per-request tops out at a few
-      thousand concurrent requests -- far fewer than the I/O hardware
-      could support.
 - **How other languages solved this**:
     - Go: **goroutines** (lightweight, runtime-scheduled)
     - Kotlin: **coroutines** (suspend functions, structured concurrency)

@@ -383,7 +383,7 @@ public class LambdaExpressions {
         names.sort(caseInsensitive);
         System.out.println("case-insensitive sort: " + names);
 
-        // Using Runnable (void -> void) and Callable-like patterns
+        // Using Runnable
         Runnable task = () -> System.out.println("task executed");
         task.run();
     }

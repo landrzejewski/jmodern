@@ -6,16 +6,13 @@ import java.net.URI;
 import java.net.http.*;
 import java.net.http.HttpResponse.BodyHandlers;
 import java.util.*;
-import java.util.function.Predicate;
 import java.util.stream.*;
 
 public class Solutions {
 
     static List<ConfigEntry> parseConfig(String configText) {
         return configText.lines()
-                .filter(Predicate.not(String::isBlank))
-                .filter(line -> !line.strip().startsWith("#"))
-                .filter(line -> line.contains("="))
+                .filter(line -> !line.strip().startsWith("#") && line.contains("="))
                 .map(line -> {
                     var parts = line.split("=", 2);
                     return new ConfigEntry(parts[0].strip(), parts[1].strip());
