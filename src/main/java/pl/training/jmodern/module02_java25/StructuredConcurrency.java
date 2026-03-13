@@ -23,27 +23,6 @@ import java.util.stream.*;
   przestaliśmy używać goto i zyskaliśmy lokalne rozumowanie o przepływie
   sterowania, structured concurrency pozwala nam lokalnie rozumować
   o czasie życia współbieżnych operacji.
-- **Pochodzenie**: "Notes on structured concurrency, or: Go statement
-  considered harmful" (Nathaniel J. Smith, 2018). Pomysł został
-  przyjęty przez Kotlin (coroutineScope), Swift (TaskGroup) i teraz Javę.
-- **Oś czasu JEP**:
-    - JEP 428: Inkubator w Java 19
-    - JEP 437: Drugi inkubator w Java 20
-    - JEP 453: Preview w Java 21
-    - JEP 462: Preview w Java 22
-    - JEP 480: Preview w Java 23
-    - JEP 499: Preview w Java 24
-    - JEP 505: Preview w Java 25
-- **Kluczowy niezmiennik**: zadania potomne nie mogą przeżyć zakresu,
-  który je utworzył. Gdy blok try-with-resources zakresu się kończy,
-  wszystkie zadania potomne mają gwarancję zakończenia (lub anulowania).
-- **Bazuje na virtual threads** (patrz module02_java21): zakresy tworzą
-  virtual threads dla każdego rozwidlonego zadania. Połączenie tanich
-  wątków + ograniczonego czasu życia zakresu stanowi fundament.
-- **`StructuredTaskScope`** to interfejs (nie klasa) ze statycznymi
-  metodami fabrycznymi `open(joiner)`. Joiner określa politykę
-  zakończenia (wszystkie muszą się udać, pierwszy wygrywa, itp.).
-- **Cykl życia**: open → fork → join → close (zawsze w tej kolejności).
 */
 
 // ============================================================
@@ -391,45 +370,7 @@ public class StructuredConcurrency {
             }
         }
 
-        // ---- Demo 2: awaitAll — odporne wyszukiwanie ----
-        System.out.println("\n--- Demo 2: awaitAll -- resilient search ---");
-        try (var scope = StructuredTaskScope.open(Joiner.<SearchResult>awaitAll())) {
-            var tasks = new ArrayList<Subtask<SearchResult>>();
-            tasks.add(scope.fork(() -> {
-                Thread.sleep(80);
-                return new SearchResult("Google", List.of("result-g1", "result-g2"));
-            }));
-            tasks.add(scope.fork(() -> {
-                Thread.sleep(50);
-                throw new RuntimeException("Bing is down");
-            }));
-            tasks.add(scope.fork(() -> {
-                Thread.sleep(120);
-                return new SearchResult("DuckDuckGo", List.of("result-d1"));
-            }));
-            tasks.add(scope.fork(() -> {
-                Thread.sleep(60);
-                throw new RuntimeException("Yahoo timeout");
-            }));
-
-            scope.join();
-
-            var allResults = tasks.stream()
-                    .filter(t -> t.state() == Subtask.State.SUCCESS)
-                    .map(Subtask::get)
-                    .toList();
-
-            System.out.println("  Successful sources: " + allResults.size() + " / " + tasks.size());
-            for (var result : allResults) {
-                System.out.println("    " + result.source() + ": " + result.results());
-            }
-            var merged = allResults.stream()
-                    .flatMap(r -> r.results().stream())
-                    .toList();
-            System.out.println("  Merged results: " + merged);
-        }
-
-        // ---- Demo 3: allUntil — własne krótkie spięcie ----
+        // ---- Demo 2: allUntil
         System.out.println("\n--- Demo 3: allUntil -- custom short-circuit ---");
         try (var scope = StructuredTaskScope.open(
                 Joiner.<Integer>allUntil(subtask ->
@@ -452,151 +393,6 @@ public class StructuredConcurrency {
     }
 
     // ============================================================
-    // Sekcja 4: Konfiguracja, limity czasowe i obsługa wyjątków
-    // ============================================================
-
-    static void configurationTimeoutsAndExceptions() throws Exception {
-        System.out.println("\n=== Section 4: Configuration, Timeouts, and Exception Handling ===");
-
-        // ---- Demo 1: Nazwany zakres + limit czasowy ----
-        System.out.println("\n--- Demo 1: Named scope + timeout ---");
-        try (var scope = StructuredTaskScope.open(
-                Joiner.<String>allSuccessfulOrThrow(),
-                cf -> cf.withName("fetch-scope").withTimeout(Duration.ofMillis(500)))) {
-
-            scope.fork(() -> simulateSlowOperation(2000)); // Przekroczy limit czasowy
-            scope.fork(() -> { Thread.sleep(100); return "Fast task done"; });
-
-            scope.join();
-            System.out.println("  Should not reach here");
-        } catch (StructuredTaskScope.TimeoutException e) {
-            System.out.println("  TimeoutException caught!");
-            System.out.println("  The scope 'fetch-scope' timed out after 500ms");
-            System.out.println("  Note: this is StructuredTaskScope.TimeoutException, not java.util.concurrent.TimeoutException");
-        }
-
-        // ---- Demo 2: Inspekcja FailedException ----
-        System.out.println("\n--- Demo 2: FailedException inspection ---");
-        try (var scope = StructuredTaskScope.open(Joiner.<String>allSuccessfulOrThrow())) {
-            scope.fork(() -> {
-                // Symulacja wyjątku sprawdzanego opakowanego w callable
-                throw new Exception("Database connection refused");
-            });
-            scope.fork(() -> { Thread.sleep(100); return "Other task"; });
-
-            scope.join();
-        } catch (FailedException e) {
-            System.out.println("  FailedException caught");
-            System.out.println("  Type: " + e.getClass().getName());
-            System.out.println("  Is RuntimeException: " + (e instanceof RuntimeException));
-            System.out.println("  Cause type: " + e.getCause().getClass().getName());
-            System.out.println("  Cause message: " + e.getCause().getMessage());
-        }
-
-        // ---- Demo 3: Reguły cyklu życia zakresu ----
-        System.out.println("\n--- Demo 3: Scope lifecycle rules ---");
-        System.out.println("  Correct order: open -> fork -> join -> close");
-
-        // Demonstracja, że fork po join rzuca IllegalStateException
-        try (var scope = StructuredTaskScope.open(Joiner.<String>awaitAll())) {
-            scope.fork(() -> "first task");
-            scope.join();
-
-            // Fork po join powinien rzucić wyjątek
-            scope.fork(() -> "too late");
-            System.out.println("  Should not reach here");
-        } catch (IllegalStateException e) {
-            System.out.println("  fork() after join() -> IllegalStateException: " + e.getMessage());
-        }
-
-        // Demonstracja isCancelled
-        System.out.println("\n  Checking isCancelled() after timeout:");
-        try (var scope = StructuredTaskScope.open(
-                Joiner.<String>allSuccessfulOrThrow(),
-                cf -> cf.withTimeout(Duration.ofMillis(100)))) {
-
-            scope.fork(() -> simulateSlowOperation(5000));
-            scope.join();
-        } catch (StructuredTaskScope.TimeoutException e) {
-            System.out.println("  Scope timed out (as expected)");
-        }
-    }
-
-    // ============================================================
-    // Sekcja 5: Praktyczne wzorce i porównanie
-    // ============================================================
-
-    static void practicalPatternsAndComparison() throws Exception {
-        System.out.println("\n=== Section 5: Practical Patterns and Comparison ===");
-
-        // ---- Demo 1: Fan-out z dynamiczną liczbą ----
-        System.out.println("\n--- Demo 1: Fan-out -- weather for multiple cities ---");
-        var cities = List.of("London", "Paris", "Tokyo", "New York", "Sydney");
-
-        try (var scope = StructuredTaskScope.open(Joiner.<WeatherData>allSuccessfulOrThrow())) {
-            for (var city : cities) {
-                scope.fork(() -> simulateFetchWeather(city, 100 + (long) (Math.random() * 100)));
-            }
-
-            var results = scope.join()
-                    .map(Subtask::get)
-                    .toList();
-
-            System.out.println("  Fetched weather for " + results.size() + " cities:");
-            for (var weather : results) {
-                System.out.printf("    %-10s %.1f°C  %s%n",
-                        weather.city(), weather.temperature(), weather.condition());
-            }
-        }
-
-        // ---- Demo 2: Zagnieżdżone zakresy ----
-        System.out.println("\n--- Demo 2: Nested scopes ---");
-        try (var outerScope = StructuredTaskScope.open(Joiner.<String>allSuccessfulOrThrow())) {
-
-            outerScope.fork(() -> {
-                // Wewnętrzny zakres dla danych użytkownika
-                try (var innerScope = StructuredTaskScope.open(Joiner.<String>allSuccessfulOrThrow())) {
-                    innerScope.fork(() -> { Thread.sleep(50); return "user-name"; });
-                    innerScope.fork(() -> { Thread.sleep(80); return "user-email"; });
-                    var innerResults = innerScope.join().map(Subtask::get).toList();
-                    return "UserData: " + innerResults;
-                }
-            });
-
-            outerScope.fork(() -> {
-                // Wewnętrzny zakres dla danych produktu
-                try (var innerScope = StructuredTaskScope.open(Joiner.<String>allSuccessfulOrThrow())) {
-                    innerScope.fork(() -> { Thread.sleep(60); return "product-name"; });
-                    innerScope.fork(() -> { Thread.sleep(70); return "product-price"; });
-                    var innerResults = innerScope.join().map(Subtask::get).toList();
-                    return "ProductData: " + innerResults;
-                }
-            });
-
-            var results = outerScope.join().map(Subtask::get).toList();
-            System.out.println("  Outer scope collected " + results.size() + " results:");
-            for (var result : results) {
-                System.out.println("    " + result);
-            }
-            System.out.println("  Inner scopes completed before outer scope — hierarchical completion");
-        }
-
-        // ---- Demo 3: Podsumowanie najlepszych praktyk ----
-        System.out.println("\n--- Demo 3: Best practices summary ---");
-        System.out.println("  1. Always use try-with-resources for StructuredTaskScope");
-        System.out.println("  2. Prefer the most restrictive Joiner that fits your use case:");
-        System.out.println("     - allSuccessfulOrThrow() for all-or-nothing operations");
-        System.out.println("     - anySuccessfulResultOrThrow() for racing / first-wins");
-        System.out.println("     - awaitAll() for partial failure tolerance");
-        System.out.println("  3. Keep forked tasks I/O-bound — structured concurrency shines");
-        System.out.println("     with blocking operations on virtual threads");
-        System.out.println("  4. Use withTimeout() to prevent indefinite blocking");
-        System.out.println("  5. Use withName() for debuggability in thread dumps");
-        System.out.println("  6. Prefer ScopedValue over ThreadLocal for context propagation");
-        System.out.println("  7. Remember: StructuredTaskScope is still preview in Java 25 (JEP 505)");
-    }
-
-    // ============================================================
     // Main -- uruchomienie wszystkich sekcji
     // ============================================================
 
@@ -604,7 +400,5 @@ public class StructuredConcurrency {
         introductionToStructuredConcurrency();
         joinerAllAndAny();
         joinerAwaitAllAndAllUntil();
-        configurationTimeoutsAndExceptions();
-        practicalPatternsAndComparison();
     }
 }

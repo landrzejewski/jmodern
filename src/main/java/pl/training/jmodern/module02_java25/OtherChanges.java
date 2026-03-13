@@ -117,35 +117,7 @@ import java.lang.classfile.attribute.*;
 */
 
 // ============================================================
-// Sekcja 5: Deklaracje importu modułów
-// ============================================================
-
-/*
-## Deklaracje importu modułów
-
-- **JEP 476** (preview Java 23, kontynuowane w Java 25) dodaje
-  nową formę importu: import module <nazwa-modułu>;
-- **import module java.base;** importuje WSZYSTKIE publiczne typy
-  najwyższego poziomu eksportowane przez moduł java.base. Obejmuje to:
-    - java.util.* (List, Map, Set, itp.)
-    - java.util.stream.* (Stream, Collectors, Gatherers)
-    - java.util.function.* (Function, Predicate, itp.)
-    - java.io.* (InputStream, OutputStream, itp.)
-    - java.nio.file.* (Path, Files, itp.)
-    - java.time.* (Instant, Duration, LocalDate, itp.)
-    - java.util.regex.* (Pattern, Matcher)
-    - java.util.concurrent.* (CompletableFuture, itp.)
-    - ... i wiele więcej pakietów z java.base
-- **Ten plik tego używa**: import module java.base; na górze
-  zastępuje to, co byłoby dziesiątkami indywidualnych importów.
-- **Działa obok konkretnych importów**: np. import java.lang.classfile.*
-  może współistnieć z import module java.base;
-- **Rozwiązywanie niejednoznaczności**: Jeśli dwa moduły eksportują
-  tę samą prostą nazwę typu, trzeba dodać jawny import, aby rozwiązać.
-*/
-
-// ============================================================
-// Sekcja 6: Stream Gatherers (JEP 485, Java 24)
+// Sekcja 5: Stream Gatherers (JEP 485, Java 24)
 // ============================================================
 
 /*
@@ -179,66 +151,7 @@ import java.lang.classfile.attribute.*;
 */
 
 // ============================================================
-// Sekcja 7: Class-File API (JEP 484, Java 24)
-// ============================================================
-
-/*
-## Class-File API (programowe parsowanie plików klas)
-
-- **JEP 457** (preview Java 22), **JEP 466** (preview Java 23),
-  **JEP 484** (sfinalizowane Java 24).
-- **java.lang.classfile.ClassFile** — standardowe API do odczytywania,
-  transformowania i generowania plików .class programowo.
-- **Zamiennik dla ASM**: Przed tym API manipulacja kodem bajtowym
-  wymagała bibliotek zewnętrznych (ASM, Javassist, ByteBuddy).
-  Teraz samo JDK dostarcza standardowe, utrzymywane API.
-- **Kluczowe typy**:
-    - ClassFile — punkt wejścia do parsowania i generowania
-    - ClassModel — reprezentuje sparsowany plik .class
-    - MethodModel, FieldModel — metody i pola
-    - Attributes — dostęp do atrybutów pliku klasy
-- **Przypadki użycia**:
-    - Generowanie kodu bajtowego we frameworkach (proxy, AOP)
-    - Analiza narzędzi budowania (skanowanie zależności)
-    - Wsparcie IDE (inspekcja struktury klas)
-    - Narzędzia edukacyjne (eksploracja kodu bajtowego)
-- **Przewaga nad ASM**: Wersjonowane razem z JDK, zawsze obsługuje
-  najnowszy format pliku klasy. Brak opóźnień wersji ani problemów
-  z kompatybilnością z nowymi wersjami JDK.
-*/
-
-// ============================================================
-// Sekcja 8: Wyprzedzające ładowanie i linkowanie klas (Project Leyden)
-// ============================================================
-
-/*
-## Wyprzedzające ładowanie i linkowanie klas (Project Leyden)
-
-- **JEP 483 (Java 24)**: AOT Cache — wstępnie przygotowane decyzje
-  dotyczące ładowania i linkowania klas przechowywane w archiwum współdzielonym.
-- **Trzystopniowy przepływ pracy**:
-    1. java -XX:AOTMode=record -XX:AOTConfiguration=app.aotconf -cp app.jar com.example.Main
-       → Rejestruje decyzje ładowania/linkowania klas podczas przebiegu treningowego
-    2. java -XX:AOTMode=create -XX:AOTConfiguration=app.aotconf -XX:AOTCache=app.aot -cp app.jar
-       → Tworzy cache AOT z zarejestrowanych danych
-    3. java -XX:AOTMode=on -XX:AOTCache=app.aot -cp app.jar com.example.Main
-       → Uruchamia z wstępnie zbudowanym cache dla szybszego startu
-- **Poprawa startu**: Klasy są ładowane z archiwum współdzielonego
-  zamiast skanowania classpath i weryfikacji przy każdym starcie.
-  Może to znacząco skrócić czas uruchamiania.
-- **Szersza wizja Project Leyden**: Przeniesienie pracy z czasu
-  wykonania na wcześniejsze fazy (czas budowania, pierwszy start,
-  kompilacja AOT). AOT Cache to jeden krok; przyszłe JEP mogą
-  dodać bardziej agresywne optymalizacje wyprzedzające.
-- **Powiązane**: Bazuje na technologii CDS (Class Data Sharing),
-  która jest w JVM od lat, ale czyni ją znacznie bardziej
-  praktyczną i zautomatyzowaną.
-- **To nie jest API** — wyłącznie flagi JVM i narzędzia. Brak kodu
-  do zademonstrowania; to kwestia wdrożenia/operacji.
-*/
-
-// ============================================================
-// Sekcja 9: Pisanie prostych skryptów
+// Sekcja 6: Pisanie prostych skryptów
 // ============================================================
 
 /*
@@ -362,8 +275,6 @@ public class OtherChanges {
         System.out.println("    3. void main(String[] args) — instance method");
         System.out.println("    4. void main() — instance method");
         System.out.println();
-        System.out.println("  java.io.IO class (println, print, readln) — planned but not yet available.");
-        System.out.println("  Use case: teaching, scripting, small utilities.");
     }
 
     // ============================================================
@@ -461,65 +372,7 @@ public class OtherChanges {
     }
 
     // ============================================================
-    // Sekcja 5: Deklaracje importu modułów
-    // ============================================================
-
-    static void moduleImportDeclarations() {
-        System.out.println("\n=== Section 5: Module Import Declarations (JEP 476) ===");
-
-        // ---- Demo 1: Użycie typów bez jawnych importów ----
-        System.out.println("--- Demo 1: Types available via import module java.base ---");
-        System.out.println("  This file uses: import module java.base;");
-        System.out.println("  All of these types are available without individual imports:");
-
-        // Kolekcje
-        List<String> list = List.of("a", "b", "c");
-        Map<String, Integer> map = Map.of("x", 1, "y", 2);
-        Set<Integer> set = Set.of(1, 2, 3);
-        System.out.println("    List:   " + list);
-        System.out.println("    Map:    " + map);
-        System.out.println("    Set:    " + set);
-
-        // Czas
-        Instant now = Instant.now();
-        Duration duration = Duration.ofMinutes(5);
-        System.out.println("    Instant.now():      " + now);
-        System.out.println("    Duration.ofMinutes: " + duration);
-
-        // NIO
-        Path path = Path.of("src", "main", "java");
-        System.out.println("    Path.of():          " + path);
-
-        // Wyrażenia regularne
-        Pattern pattern = Pattern.compile("\\d+");
-        Matcher matcher = pattern.matcher("abc123def456");
-        List<String> matches = new ArrayList<>();
-        while (matcher.find()) matches.add(matcher.group());
-        System.out.println("    Pattern/Matcher:    found " + matches + " in \"abc123def456\"");
-
-        // Współbieżność
-        CompletableFuture<String> future = CompletableFuture.completedFuture("done");
-        System.out.println("    CompletableFuture:  " + future.join());
-
-        // Funkcyjne
-        Function<String, Integer> strlen = String::length;
-        Predicate<Integer> isPositive = n -> n > 0;
-        System.out.println("    Function<String,Integer>: \"hello\" -> " + strlen.apply("hello"));
-        System.out.println("    Predicate<Integer>: 42 -> " + isPositive.test(42));
-
-        // ---- Demo 2: Wyświetlenie dostępnych modułów ----
-        System.out.println("\n--- Demo 2: Available modules in boot layer ---");
-        var modules = ModuleLayer.boot().modules().stream()
-                .map(Module::getName)
-                .sorted()
-                .toList();
-        System.out.println("  Boot layer has " + modules.size() + " modules.");
-        System.out.println("  First 10: " + modules.stream().limit(10).toList());
-        System.out.println("  import module <name>; can import from any of these.");
-    }
-
-    // ============================================================
-    // Sekcja 6: Stream Gatherers (JEP 485, Java 24)
+    // Sekcja 5: Stream Gatherers (JEP 485, Java 24)
     // ============================================================
 
     static void streamGatherers() {
@@ -584,29 +437,6 @@ public class OtherChanges {
                 .toList();
         System.out.println("  Input:       " + people.stream().map(p -> p.name() + "(" + p.age() + ")").toList());
         System.out.println("  distinctBy(age): " + distinctByAge.stream().map(p -> p.name() + "(" + p.age() + ")").toList());
-
-        // ---- mapConcurrent: mapowanie z ograniczoną współbieżnością ----
-        System.out.println("\n--- mapConcurrent: bounded-concurrency mapping ---");
-        var urls = List.of("page-1", "page-2", "page-3", "page-4", "page-5");
-        var startTime = System.currentTimeMillis();
-        var results = urls.stream()
-                .gather(Gatherers.mapConcurrent(3, url -> {
-                    try {
-                        Thread.sleep(100); // Symulacja I/O
-                    } catch (InterruptedException e) {
-                        Thread.currentThread().interrupt();
-                    }
-                    return url + " [fetched on " + Thread.currentThread().getName() + "]";
-                }))
-                .toList();
-        var elapsed = System.currentTimeMillis() - startTime;
-        System.out.println("  Input: " + urls);
-        System.out.println("  mapConcurrent(3) results:");
-        for (var r : results) {
-            System.out.println("    " + r);
-        }
-        System.out.println("  Elapsed: ~" + elapsed + "ms (3 concurrent virtual threads, 5 items with 100ms each)");
-        System.out.println("  Without concurrency would be ~500ms, with 3 concurrent ~200ms");
     }
 
     static <T, K> Gatherer<T, ?, T> distinctBy(Function<T, K> keyExtractor) {
@@ -622,88 +452,7 @@ public class OtherChanges {
     }
 
     // ============================================================
-    // Sekcja 7: Class-File API (JEP 484, Java 24)
-    // ============================================================
-
-    static void classFileApi() throws Exception {
-        System.out.println("\n=== Section 7: Class-File API (JEP 484, Java 24) ===");
-
-        // ---- Demo 1: Parsowanie String.class ----
-        System.out.println("--- Demo 1: Parse String.class ---");
-        var cf = ClassFile.of();
-        byte[] stringClassBytes;
-        try (var stream = String.class.getResourceAsStream("String.class")) {
-            Objects.requireNonNull(stream, "String.class resource not found");
-            stringClassBytes = stream.readAllBytes();
-        }
-        var stringModel = cf.parse(stringClassBytes);
-
-        System.out.println("  Class name:    " + stringModel.thisClass().asInternalName());
-        System.out.println("  Superclass:    " + stringModel.superclass().map(ci -> ci.asInternalName()).orElse("none"));
-        System.out.println("  Interfaces:    " + stringModel.interfaces().size());
-        var methods = stringModel.methods();
-        var fields = stringModel.fields();
-        System.out.println("  Methods:       " + methods.size());
-        System.out.println("  Fields:        " + fields.size());
-
-        // ---- Demo 2: Lista metod sparsowanej klasy ----
-        System.out.println("\n--- Demo 2: List methods of String.class (first 15) ---");
-        methods.stream()
-                .limit(15)
-                .forEach(m -> System.out.println("    " + m.methodName().stringValue()
-                        + m.methodType().stringValue()));
-
-        // ---- Demo 3: Inspekcja własnej klasy ----
-        System.out.println("\n--- Demo 3: Inspect OtherChanges.class itself ---");
-        byte[] ownBytes;
-        try (var stream = OtherChanges.class.getResourceAsStream("OtherChanges.class")) {
-            Objects.requireNonNull(stream, "OtherChanges.class resource not found");
-            ownBytes = stream.readAllBytes();
-        }
-        var ownModel = cf.parse(ownBytes);
-
-        System.out.println("  Class name:  " + ownModel.thisClass().asInternalName());
-        System.out.println("  Superclass:  " + ownModel.superclass().map(ci -> ci.asInternalName()).orElse("none"));
-        System.out.println("  Methods (" + ownModel.methods().size() + "):");
-        for (var m : ownModel.methods()) {
-            System.out.println("    " + m.methodName().stringValue() + m.methodType().stringValue());
-        }
-
-        // Lista klas wewnętrznych z atrybutu InnerClasses
-        System.out.println("  Inner classes:");
-        for (var attr : ownModel.attributes()) {
-            if (attr instanceof InnerClassesAttribute innerClasses) {
-                for (var ic : innerClasses.classes()) {
-                    System.out.println("    " + ic.innerClass().asInternalName());
-                }
-            }
-        }
-    }
-
-    // ============================================================
-    // Sekcja 8: Wyprzedzające ładowanie i linkowanie klas (Project Leyden)
-    // ============================================================
-
-    static void aotClassLoadingAndLinking() {
-        System.out.println("\n=== Section 8: Ahead-of-Time Class Loading & Linking (Project Leyden) ===");
-
-        System.out.println("  JEP 483 (Java 24): AOT Cache for faster JVM startup.");
-        System.out.println("  Three-step workflow:");
-        System.out.println("    1. java -XX:AOTMode=record -XX:AOTConfiguration=app.aotconf -cp app.jar com.example.Main");
-        System.out.println("       -> Records class loading/linking decisions during a training run");
-        System.out.println("    2. java -XX:AOTMode=create -XX:AOTConfiguration=app.aotconf -XX:AOTCache=app.aot -cp app.jar");
-        System.out.println("       -> Creates the AOT cache from recorded data");
-        System.out.println("    3. java -XX:AOTMode=on -XX:AOTCache=app.aot -cp app.jar com.example.Main");
-        System.out.println("       -> Runs with pre-built cache for faster startup");
-        System.out.println();
-        System.out.println("  Benefits: classes loaded from shared archive instead of classpath scanning.");
-        System.out.println("  Part of Project Leyden: shift work from runtime to earlier phases.");
-        System.out.println("  Builds on CDS (Class Data Sharing) technology.");
-        System.out.println("  Not an API — purely JVM flags and tooling.");
-    }
-
-    // ============================================================
-    // Sekcja 9: Pisanie prostych skryptów
+    // Sekcja 6: Pisanie prostych skryptów
     // ============================================================
 
     static void writingSimpleScripts() {
@@ -723,11 +472,6 @@ public class OtherChanges {
         System.out.println();
         System.out.println("  Multi-file source programs:");
         System.out.println("    java --source 25 Main.java — can reference other .java files");
-        System.out.println();
-        System.out.println("  Comparison:");
-        System.out.println("    JShell:          Interactive REPL, great for experimentation");
-        System.out.println("    Source launcher:  Runs complete programs as scripts");
-        System.out.println("    Groovy:          Java's source launcher now covers many Groovy scripting use cases");
     }
 
     // ============================================================
@@ -739,10 +483,7 @@ public class OtherChanges {
         implicitlyDeclaredClasses();
         primitiveTypesInPatternMatching();
         flexibleConstructorBodies();
-        moduleImportDeclarations();
         streamGatherers();
-        classFileApi();
-        aotClassLoadingAndLinking();
         writingSimpleScripts();
     }
 }

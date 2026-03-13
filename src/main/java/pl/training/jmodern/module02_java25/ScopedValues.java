@@ -27,24 +27,6 @@ import java.util.concurrent.StructuredTaskScope.*;
       się zmienić w tym zakresie. Nie ma metody `set()`.
     - Automatycznie dziedziczone przez potomne virtual threads
       utworzone przez `StructuredTaskScope.fork()`.
-- **Oś czasu JEP**:
-    - JEP 429: Inkubator w Java 20
-    - JEP 446: Preview w Java 21
-    - JEP 464: Drugi preview w Java 22
-    - JEP 481: Trzeci preview w Java 23
-    - JEP 487: Czwarty preview w Java 24
-    - Preview w Java 25
-- **Kształt API** (aktualny na Java 25):
-    - `ScopedValue.newInstance()` — metoda fabryczna
-    - `ScopedValue.where(sv, value)` → `Carrier`
-    - `Carrier.where(sv, value)` — łączenie wielu wiązań
-    - `Carrier.run(Runnable)` / `Carrier.call(CallableOp)`
-    - `ScopedValue.get()` — odczyt związanej wartości
-    - `ScopedValue.isBound()` — sprawdzenie, czy jest aktualnie związana
-    - `ScopedValue.orElse(T)` — związana wartość lub domyślna
-    - `ScopedValue.orElseThrow(Supplier)` — związana wartość lub wyjątek
-- **Uwaga**: stare `ScopedValue.runWhere()` już nie istnieje;
-  aktualne API to `ScopedValue.where(...).run(...)`.
 */
 
 // ============================================================
@@ -244,7 +226,7 @@ public class ScopedValues {
         });
         System.out.println("  call() returned: " + result);
 
-        // call() z obsługą wyjątków sprawdzanych
+        // call() z obsługą wyjątków
         System.out.println("  call() supports checked exceptions via CallableOp<R, X>:");
         try {
             ScopedValue.where(CURRENT_USER, "charlie").call(() -> {
@@ -257,19 +239,11 @@ public class ScopedValues {
             System.out.println("  Caught checked exception: " + e.getMessage());
         }
 
-        // ---- Demo 3: isBound() dla logiki warunkowej ----
-        System.out.println("\n--- Demo 3: isBound() for conditional logic ---");
-        System.out.println("  resolveUser() outside scope: " + resolveUser());
-        ScopedValue.where(CURRENT_USER, "diana").run(() -> {
-            System.out.println("  resolveUser() inside scope: " + resolveUser());
-        });
-
-        // ---- Demo 4: Ponowne użycie Carrier ----
-        System.out.println("\n--- Demo 4: Carrier reuse ---");
+        // ---- Demo 3: Ponowne użycie Carrier ----
+        System.out.println("\n--- Demo 3: Carrier reuse ---");
         var carrier = ScopedValue.where(CURRENT_USER, "eve");
         carrier.run(() -> System.out.println("  First run: " + CURRENT_USER.get()));
         carrier.run(() -> System.out.println("  Second run: " + CURRENT_USER.get()));
-        carrier.run(() -> System.out.println("  Third run (same carrier): " + CURRENT_USER.get()));
     }
 
     // ============================================================
@@ -333,7 +307,7 @@ public class ScopedValues {
     }
 
     // ============================================================
-    // Sekcja 4: Wiązanie wielu wartości -- Łączenie Carrier
+    // Sekcja 4: Wiązanie wielu wartości
     // ============================================================
 
     static void multipleBindingsCarrierChaining() throws Exception {
@@ -362,43 +336,6 @@ public class ScopedValues {
         System.out.println("  Carrier.get(TENANT)       = " + carrier.get(TENANT));
         System.out.println("  Inspected bindings before calling run()");
         carrier.run(() -> System.out.println("  Inside run(): CURRENT_USER = " + CURRENT_USER.get()));
-
-        // ---- Demo 3: Wzorzec kontekstu żądania ----
-        System.out.println("\n--- Demo 3: Request context pattern (controller -> service -> repository) ---");
-        ScopedValue.where(CURRENT_USER, "charlie")
-                .where(TRACE_ID, "trace-req-001")
-                .where(TENANT, "initech")
-                .run(() -> {
-                    // Warstwa kontrolera
-                    System.out.println("  [Controller] Handling request for user=" + CURRENT_USER.get()
-                            + ", trace=" + TRACE_ID.get());
-
-                    // Warstwa serwisu — bez przekazywania parametrów, odczytuje scoped values bezpośrednio
-                    System.out.println("  [Service] Processing order for tenant=" + TENANT.get()
-                            + ", user=" + CURRENT_USER.get());
-
-                    // Warstwa repozytorium
-                    System.out.println("  [Repository] Querying DB for tenant=" + TENANT.get()
-                            + ", trace=" + TRACE_ID.get());
-
-                    System.out.println("  No parameter passing needed — all layers read ScopedValues directly");
-                });
-
-        // ---- Demo 4: Częściowe ponowne wiązanie ----
-        System.out.println("\n--- Demo 4: Partial rebinding ---");
-        ScopedValue.where(CURRENT_USER, "alice")
-                .where(TENANT, "acme")
-                .run(() -> {
-                    System.out.println("  Outer: USER=" + CURRENT_USER.get() + ", TENANT=" + TENANT.get());
-
-                    // Ponowne wiązanie tylko USER, TENANT pozostaje z zakresu zewnętrznego
-                    ScopedValue.where(CURRENT_USER, "bob").run(() -> {
-                        System.out.println("  Inner: USER=" + CURRENT_USER.get() + ", TENANT=" + TENANT.get());
-                        System.out.println("  Only USER was rebound; TENANT inherited from outer scope");
-                    });
-
-                    System.out.println("  Outer restored: USER=" + CURRENT_USER.get() + ", TENANT=" + TENANT.get());
-                });
     }
 
     // ============================================================
@@ -408,35 +345,7 @@ public class ScopedValues {
     static void integrationWithStructuredConcurrency() throws Exception {
         System.out.println("\n=== Section 5: Integration with Structured Concurrency ===");
 
-        // ---- Demo 1: Dziedziczenie przez rozwidlone zadania ----
-        System.out.println("\n--- Demo 1: ScopedValue inherited by forked tasks ---");
-        ScopedValue.where(CURRENT_USER, "alice").run(() -> {
-            try (var scope = StructuredTaskScope.open(Joiner.<String>allSuccessfulOrThrow())) {
-                scope.fork(() -> {
-                    Thread.sleep(50);
-                    return "Task-1: user=" + CURRENT_USER.get() + " on " + Thread.currentThread().getName();
-                });
-                scope.fork(() -> {
-                    Thread.sleep(80);
-                    return "Task-2: user=" + CURRENT_USER.get() + " on " + Thread.currentThread().getName();
-                });
-                scope.fork(() -> {
-                    Thread.sleep(60);
-                    return "Task-3: user=" + CURRENT_USER.get() + " on " + Thread.currentThread().getName();
-                });
-
-                var results = scope.join().map(Subtask::get).toList();
-                for (var r : results) {
-                    System.out.println("  " + r);
-                }
-                System.out.println("  All forked tasks inherited CURRENT_USER=\"alice\"");
-            } catch (Exception e) {
-                throw new RuntimeException(e);
-            }
-        });
-
-        // ---- Demo 2: Śledzenie żądań ----
-        System.out.println("\n--- Demo 2: Request tracing with ScopedValues ---");
+        System.out.println("\n--- Demo 1: Request tracing with ScopedValues ---");
         ScopedValue.where(CURRENT_USER, "bob")
                 .where(TRACE_ID, "trace-req-42")
                 .run(() -> {
@@ -464,8 +373,7 @@ public class ScopedValues {
                     }
                 });
 
-        // ---- Demo 3: Ponowne wiązanie w zadaniu potomnym ----
-        System.out.println("\n--- Demo 3: Rebinding in child task ---");
+        System.out.println("\n--- Demo 2: Rebinding in child task ---");
         ScopedValue.where(CURRENT_USER, "admin").run(() -> {
             try (var scope = StructuredTaskScope.open(Joiner.<String>allSuccessfulOrThrow())) {
                 // To zadanie ponownie wiąże USER do "service-account" we własnym zakresie
